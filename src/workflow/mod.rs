@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use uuid::Uuid;
+
 
 use crate::modules::audit::logger::{AuditError, AuditEvent, AuditLogger};
 use crate::modules::audit::proof::AuditProof;
@@ -12,6 +12,8 @@ use crate::modules::prompt_firewall::dtos::{
     FirewallAction, PromptFirewallRequest, PromptFirewallResult,
 };
 use crate::modules::prompt_firewall::service::PromptFirewallService;
+use crate::modules::telemetry::correlation::generate_correlation_id_from_request;
+use crate::modules::telemetry::tracing::{log_with_correlation, create_span_with_correlation};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub enum WorkflowStatus {
@@ -76,9 +78,12 @@ impl ComplianceEngine {
         &self,
         request: ComplianceRequest,
     ) -> Result<ComplianceResponse, WorkflowError> {
-        let correlation_id = request
-            .correlation_id
-            .unwrap_or_else(|| Uuid::new_v4().to_string());
+        let correlation_id = generate_correlation_id_from_request(request.correlation_id);
+        let span = create_span_with_correlation(&correlation_id, "compliance_workflow");
+        let _enter = span.enter();
+
+        log_with_correlation(&correlation_id, tracing::Level::INFO, "Starting compliance workflow");
+        
         let firewall = self.firewall_service.inspect(PromptFirewallRequest {
             prompt: request.prompt.clone(),
             correlation_id: Some(correlation_id.clone()),
@@ -90,6 +95,8 @@ impl ComplianceEngine {
         });
 
         if firewall.action == FirewallAction::Block {
+            log_with_correlation(&correlation_id, tracing::Level::WARN, "Prompt blocked by firewall");
+            
             let proof = self.audit_logger.log_event(AuditEvent {
                 correlation_id: correlation_id.clone(),
                 original_prompt: request.prompt,
@@ -105,6 +112,8 @@ impl ComplianceEngine {
                 output_preview: None,
             })?;
 
+            log_with_correlation(&correlation_id, tracing::Level::INFO, "Workflow completed - blocked by firewall");
+            
             return Ok(ComplianceResponse {
                 correlation_id,
                 status: WorkflowStatus::BlockedByFirewall,
@@ -117,11 +126,14 @@ impl ComplianceEngine {
             });
         }
 
+        log_with_correlation(&correlation_id, tracing::Level::INFO, "Performing input moderation");
         let input_moderation = self
             .mistral_service
             .moderate_text(firewall.sanitized_prompt.clone())
             .await?;
         if input_moderation.flagged {
+            log_with_correlation(&correlation_id, tracing::Level::WARN, "Input flagged by moderation");
+            
             let proof = self.audit_logger.log_event(AuditEvent {
                 correlation_id: correlation_id.clone(),
                 original_prompt: request.prompt,
@@ -137,6 +149,8 @@ impl ComplianceEngine {
                 output_preview: None,
             })?;
 
+            log_with_correlation(&correlation_id, tracing::Level::INFO, "Workflow completed - blocked by input moderation");
+            
             return Ok(ComplianceResponse {
                 correlation_id,
                 status: WorkflowStatus::BlockedByInputModeration,
@@ -149,17 +163,21 @@ impl ComplianceEngine {
             });
         }
 
+        log_with_correlation(&correlation_id, tracing::Level::INFO, "Generating text with Mistral AI");
         let generation = self
             .mistral_service
             .generate_text(firewall.sanitized_prompt.clone(), true)
             .await?;
 
+        log_with_correlation(&correlation_id, tracing::Level::INFO, "Performing output moderation");
         let output_moderation = self
             .mistral_service
             .moderate_text(generation.output_text.clone())
             .await?;
 
         if output_moderation.flagged {
+            log_with_correlation(&correlation_id, tracing::Level::WARN, "Output flagged by moderation");
+            
             let proof = self.audit_logger.log_event(AuditEvent {
                 correlation_id: correlation_id.clone(),
                 original_prompt: request.prompt,
@@ -175,6 +193,8 @@ impl ComplianceEngine {
                 output_preview: Some(generation.output_text.chars().take(160).collect()),
             })?;
 
+            log_with_correlation(&correlation_id, tracing::Level::INFO, "Workflow completed - blocked by output moderation");
+            
             return Ok(ComplianceResponse {
                 correlation_id,
                 status: WorkflowStatus::BlockedByOutputModeration,
@@ -187,6 +207,8 @@ impl ComplianceEngine {
             });
         }
 
+        log_with_correlation(&correlation_id, tracing::Level::INFO, "Workflow completed successfully");
+        
         let proof = self.audit_logger.log_event(AuditEvent {
             correlation_id: correlation_id.clone(),
             original_prompt: request.prompt,
@@ -202,6 +224,8 @@ impl ComplianceEngine {
             output_preview: Some(generation.output_text.chars().take(160).collect()),
         })?;
 
+        log_with_correlation(&correlation_id, tracing::Level::DEBUG, &format!("Generated text preview: {}", generation.output_text.chars().take(160).collect::<String>()));
+        
         Ok(ComplianceResponse {
             correlation_id,
             status: WorkflowStatus::Completed,

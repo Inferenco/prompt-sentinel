@@ -1,0 +1,82 @@
+use std::time::Instant;
+
+use metrics::{counter, gauge, histogram};
+use std::sync::atomic::{AtomicU64, Ordering};
+use metrics_exporter_prometheus::PrometheusBuilder;
+use once_cell::sync::Lazy;
+
+pub struct TelemetryMetrics {
+    request_counter: AtomicU64,
+    error_counter: AtomicU64,
+    latency_histogram: AtomicU64,
+    active_requests_gauge: AtomicU64,
+}
+
+impl TelemetryMetrics {
+    pub fn new() -> Self {
+        Self {
+            request_counter: AtomicU64::new(0),
+            error_counter: AtomicU64::new(0),
+            latency_histogram: AtomicU64::new(0),
+            active_requests_gauge: AtomicU64::new(0),
+        }
+    }
+
+    pub fn increment_requests(&self, _method: &str, _endpoint: &str) {
+        self.request_counter.fetch_add(1, Ordering::SeqCst);
+        counter!("requests_total").increment(1);
+    }
+
+    pub fn increment_errors(&self, _error_type: &str) {
+        self.error_counter.fetch_add(1, Ordering::SeqCst);
+        counter!("errors_total").increment(1);
+    }
+
+    pub fn record_latency(&self, _method: &str, _endpoint: &str, duration: f64) {
+        self.latency_histogram.fetch_add(duration as u64, Ordering::SeqCst);
+        histogram!("request_latency_seconds");
+    }
+
+    pub fn increment_active_requests(&self) {
+        self.active_requests_gauge.fetch_add(1, Ordering::SeqCst);
+        gauge!("active_requests").increment(1.0);
+    }
+
+    pub fn decrement_active_requests(&self) {
+        self.active_requests_gauge.fetch_sub(1, Ordering::SeqCst);
+        gauge!("active_requests").decrement(1.0);
+    }
+
+    pub fn start_metrics_server(addr: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let builder = PrometheusBuilder::new();
+        let socket_addr: std::net::SocketAddr = addr.parse()?;
+        let builder = builder.with_http_listener(socket_addr);
+        
+        // Install the recorder
+        builder.install()?;
+        
+        Ok(())
+    }
+}
+
+pub struct RequestTimer {
+    start: Instant,
+}
+
+impl RequestTimer {
+    pub fn new() -> Self {
+        Self {
+            start: Instant::now(),
+        }
+    }
+
+    pub fn elapsed_seconds(&self) -> f64 {
+        self.start.elapsed().as_secs_f64()
+    }
+}
+
+static METRICS: Lazy<TelemetryMetrics> = Lazy::new(|| TelemetryMetrics::new());
+
+pub fn get_metrics() -> &'static TelemetryMetrics {
+    &METRICS
+}
