@@ -76,8 +76,8 @@ pub struct SledAuditStorage {
 
 impl SledAuditStorage {
     pub fn new(db_path: &str) -> Result<Self, AuditStorageError> {
-        let db = sled::open(db_path)
-            .map_err(|e| AuditStorageError::DatabaseError(e.to_string()))?;
+        let db =
+            sled::open(db_path).map_err(|e| AuditStorageError::DatabaseError(e.to_string()))?;
         Ok(Self { db })
     }
 }

@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use axum::{
+    Json, Router,
     extract::State,
     http::StatusCode,
     routing::{get, post},
-    Json, Router,
 };
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
@@ -116,7 +116,8 @@ impl FrameworkConfig {
             max_input_length: 4096,
         });
 
-        let audit_storage: Arc<dyn AuditStorage> = Arc::new(SledAuditStorage::new(&self.sled_db_path)?);
+        let audit_storage: Arc<dyn AuditStorage> =
+            Arc::new(SledAuditStorage::new(&self.sled_db_path)?);
         let audit_logger = AuditLogger::new(audit_storage);
 
         let firewall_service = PromptFirewallService::new(settings.max_input_length);
