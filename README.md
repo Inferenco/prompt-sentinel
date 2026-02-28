@@ -31,6 +31,32 @@ export RUST_LOG="info"
 cargo run --release
 ```
 
+## React Demo Frontend
+
+A standalone React + TypeScript demo UI is available at `apps/demo-web`.
+
+```bash
+# In a second terminal, start the frontend
+cd apps/demo-web
+npm install
+npm run dev
+```
+
+Optional:
+
+```bash
+# Point frontend to a different backend base URL
+export VITE_API_BASE_URL="http://localhost:3000"
+```
+
+The demo uses the current runtime endpoints:
+
+- `GET /health`
+- `GET /api/mistral/health`
+- `POST /api/compliance/check`
+
+See `apps/demo-web/README.md` for test commands and mock-mode details.
+
 ## Installation
 
 ### Prerequisites

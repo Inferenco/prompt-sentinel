@@ -1,0 +1,63 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+:root {
+  --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "Consolas", monospace;
+
+  --surface: #fffdf8;
+  --surface-muted: #f3efe4;
+  --surface-strong: #ece4cf;
+  --border: #d5ccb3;
+
+  --ink: #1f2a2f;
+  --ink-muted: #4d5d63;
+
+  --accent: #0d6b5a;
+  --accent-strong: #0b5a4c;
+  --accent-soft: #dff2eb;
+
+  --warn: #ad3f17;
+  --warn-soft: #fae5da;
+
+  --neutral-soft: #e5eef6;
+
+  --shadow: 0 10px 30px rgb(22 34 38 / 10%);
+
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-display);
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 10% 5%, #ffffff 0%, rgb(255 255 255 / 0%) 45%),
+    radial-gradient(circle at 90% 0%, #eef7f4 0%, rgb(238 247 244 / 0%) 35%),
+    linear-gradient(160deg, #f6f2e8 0%, #eef3f8 100%);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
