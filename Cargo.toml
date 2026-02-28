@@ -2,16 +2,35 @@
 name = "prompt_sentinel"
 version = "0.1.0"
 edition = "2024"
+authors = ["Inferenco"]
+description = "A reusable AI compliance framework using axum and sled"
+license = "MIT"
+repository = "https://github.com/Inferenco/prompt_sentinel"
+keywords = ["ai", "compliance", "framework", "axum", "sled"]
+categories = ["web-programming", "api-bindings", "artificial-intelligence"]
+
+[[bin]]
+name = "prompt_sentinel_server"
+path = "src/main.rs"
+
+[lib]
+name = "prompt_sentinel"
+path = "src/lib.rs"
 
 [dependencies]
 async-trait = "0.1"
+axum = "0.7"
 chrono = { version = "0.4", features = ["clock", "serde"] }
 hex = "0.4"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
+sled = "0.34"
 thiserror = "2"
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors"] }
 tracing = "0.1"
+tracing-subscriber = "0.3"
 uuid = { version = "1", features = ["serde", "v4"] }

@@ -6,6 +6,7 @@ use thiserror::Error;
 
 #[derive(Clone, Debug)]
 pub struct AppSettings {
+    pub server_port: u16,
     pub mistral_api_key: Option<String>,
     pub mistral_base_url: String,
     pub generation_model: String,
@@ -17,10 +18,12 @@ pub struct AppSettings {
 
 impl AppSettings {
     pub fn from_env() -> Result<Self, SettingsError> {
+        let server_port = parse_env_u16("SERVER_PORT", 3000)?;
         let bias_threshold = parse_env_f32("BIAS_THRESHOLD", 0.35)?;
         let max_input_length = parse_env_usize("MAX_INPUT_LENGTH", 4096)?;
 
         Ok(Self {
+            server_port,
             mistral_api_key: env::var("MISTRAL_API_KEY").ok().filter(|v| !v.is_empty()),
             mistral_base_url: env::var("MISTRAL_BASE_URL")
                 .unwrap_or_else(|_| "https://api.mistral.ai".to_owned()),
@@ -53,6 +56,18 @@ fn parse_env_usize(key: &str, default: usize) -> Result<usize, SettingsError> {
     match env::var(key) {
         Ok(value) => value
             .parse::<usize>()
+            .map_err(|source| SettingsError::ParseInt {
+                key: key.to_owned(),
+                source,
+            }),
+        Err(_) => Ok(default),
+    }
+}
+
+fn parse_env_u16(key: &str, default: u16) -> Result<u16, SettingsError> {
+    match env::var(key) {
+        Ok(value) => value
+            .parse::<u16>()
             .map_err(|source| SettingsError::ParseInt {
                 key: key.to_owned(),
                 source,
