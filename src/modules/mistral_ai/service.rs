@@ -6,7 +6,8 @@ use tracing::{debug, error, info, warn};
 use super::client::{MistralClient, MistralClientError};
 use super::dtos::{
     ChatCompletionRequest, ChatCompletionResponse, ChatMessage, EmbeddingRequest,
-    EmbeddingResponse, ModerationRequest, ModerationResponse,
+    EmbeddingResponse, ModerationRequest, ModerationResponse, ModelValidationResponse,
+    ModelValidationStatus,
 };
 
 #[derive(Clone)]
@@ -152,6 +153,59 @@ impl MistralService {
         
         debug!("Health check passed: API and models are available");
         Ok(())
+    }
+
+    pub async fn validate_models_endpoint(&self) -> ModelValidationResponse {
+        info!("Performing comprehensive model validation for /v1/models endpoint");
+        
+        let generation_status = self.validate_model_with_status(&self.generation_model).await;
+        let moderation_status = match &self.moderation_model {
+            Some(model) => Some(self.validate_model_with_status(model).await),
+            None => None,
+        };
+        let embedding_status = self.validate_model_with_status(&self.embedding_model).await;
+        
+        let overall_status = if generation_status.available 
+            && moderation_status.as_ref().map(|s| s.available).unwrap_or(true)
+            && embedding_status.available {
+            "all_models_available".to_string()
+        } else {
+            "some_models_unavailable".to_string()
+        };
+        
+        ModelValidationResponse {
+            generation_model: generation_status,
+            moderation_model: moderation_status,
+            embedding_model: embedding_status,
+            overall_status,
+        }
+    }
+
+    async fn validate_model_with_status(&self, model: &str) -> ModelValidationStatus {
+        match self.validate_model(model).await {
+            Ok(_) => ModelValidationStatus {
+                model_name: model.to_string(),
+                available: true,
+                message: "Model is available and validated".to_string(),
+            },
+            Err(e) => ModelValidationStatus {
+                model_name: model.to_string(),
+                available: false,
+                message: format!("Model validation failed: {}", e),
+            },
+        }
+    }
+
+    async fn validate_model(&self, model: &str) -> Result<(), MistralServiceError> {
+        info!("Validating model: {}", model);
+        let models = self.client.list_models().await?;
+        if models.models.iter().any(|m| m == model) {
+            debug!("Model validated successfully: {}", model);
+            Ok(())
+        } else {
+            error!("Model not found: {}", model);
+            Err(MistralServiceError::UnknownModel(model.to_string()))
+        }
     }
 
     /// Getter methods for model names (used in health checks)

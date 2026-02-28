@@ -944,6 +944,7 @@ dependencies = [
  "axum",
  "chrono",
  "hex",
+ "lazy_static",
  "proptest",
  "reqwest",
  "serde",
