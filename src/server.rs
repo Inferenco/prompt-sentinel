@@ -139,7 +139,7 @@ impl FrameworkConfig {
             mistral_api_key: self.mistral_api_key.clone(),
             mistral_base_url: "https://api.mistral.ai".to_string(),
             generation_model: "mistral-large-latest".to_string(),
-            moderation_model: None,
+            moderation_model: Some("mistral-moderation-latest".to_string()),
             embedding_model: "mistral-embed".to_string(),
             bias_threshold: 0.35,
             max_input_length: 4096,
@@ -151,10 +151,14 @@ impl FrameworkConfig {
 
         let firewall_service = PromptFirewallService::new(settings.max_input_length);
         let bias_service = BiasDetectionService::new(settings.bias_threshold);
-        let mistral_client: Arc<dyn MistralClient> = Arc::new(HttpMistralClient::new(
-            settings.mistral_base_url.clone(),
-            settings.mistral_api_key.clone().unwrap_or_default(),
-        ));
+        let mistral_client: Arc<dyn MistralClient> = if settings.mistral_api_key.as_deref() == Some("mock") {
+            Arc::new(crate::modules::mistral_ai::client::MockMistralClient::default())
+        } else {
+            Arc::new(HttpMistralClient::new(
+                settings.mistral_base_url.clone(),
+                settings.mistral_api_key.clone().unwrap_or_default(),
+            ))
+        };
         let mistral_service = MistralService::new(
             mistral_client,
             settings.generation_model.clone(),
