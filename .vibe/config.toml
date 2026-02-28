@@ -1,0 +1,25 @@
+# Mistral Vibe Configuration
+
+[skills.bias_detection]
+path = "./skills/bias_detection"
+enabled = true
+
+[skills.prompt_firewall]
+path = "./skills/prompt_firewall"
+enabled = true
+
+[skills.eu_law_compliance]
+path = "./skills/eu_law_compliance"
+enabled = true
+
+[skills.mistral_expert]
+path = "./skills/mistral_expert"
+enabled = true
+
+[tools]
+ask_user_question = { permission = "always" }
+bash = { permission = "ask" }
+grep = { permission = "always" }
+read_file = { permission = "always" }
+write_file = { permission = "ask" }
+search_replace = { permission = "ask" }
