@@ -65,7 +65,7 @@ impl BiasDetectionService {
     }
 
     pub fn scan(&self, request: BiasScanRequest) -> BiasScanResult {
-        let threshold = request.threshold.unwrap_or(self.default_threshold);
+        let threshold = normalize_threshold(request.threshold, self.default_threshold);
         let normalized = request.text.to_ascii_lowercase();
 
         let mut score = 0.0f32;
@@ -85,7 +85,8 @@ impl BiasDetectionService {
         }
 
         score = score.min(1.0);
-        let level = if score >= (threshold + 0.30).min(0.85) {
+        let high_cutoff = high_risk_cutoff(threshold);
+        let level = if score >= high_cutoff {
             BiasLevel::High
         } else if score >= threshold {
             BiasLevel::Medium
@@ -107,6 +108,25 @@ impl BiasDetectionService {
             mitigation_hints,
         }
     }
+}
+
+/// Applies an optional caller override and clamps the effective threshold
+/// into a safe range so scoring stays predictable across inputs.
+fn normalize_threshold(override_threshold: Option<f32>, default_threshold: f32) -> f32 {
+    let threshold = override_threshold
+        .filter(|value| value.is_finite())
+        .unwrap_or(default_threshold);
+    threshold.clamp(0.0, 1.0)
+}
+
+/// Derives a stricter "high risk" cutoff from the base threshold while
+/// preserving monotonic ordering (`high >= threshold`).
+fn high_risk_cutoff(threshold: f32) -> f32 {
+    let mut cutoff = (threshold + 0.30).clamp(0.60, 0.95);
+    if cutoff < threshold {
+        cutoff = threshold;
+    }
+    cutoff
 }
 
 impl Default for BiasDetectionService {
@@ -140,5 +160,19 @@ mod tests {
         });
         assert_eq!(result.level, BiasLevel::High);
         assert!(result.score > 0.5);
+    }
+
+    #[test]
+    fn nan_threshold_falls_back_to_default_threshold() {
+        let service = BiasDetectionService::default();
+        let default_result = service.scan(BiasScanRequest {
+            text: "Women are bad at math".to_owned(),
+            threshold: None,
+        });
+        let nan_result = service.scan(BiasScanRequest {
+            text: "Women are bad at math".to_owned(),
+            threshold: Some(f32::NAN),
+        });
+        assert_eq!(default_result.level, nan_result.level);
     }
 }

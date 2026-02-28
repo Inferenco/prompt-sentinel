@@ -6,8 +6,8 @@ use crate::modules::audit::logger::{AuditError, AuditEvent, AuditLogger};
 use crate::modules::audit::proof::AuditProof;
 use crate::modules::bias_detection::dtos::{BiasScanRequest, BiasScanResult};
 use crate::modules::bias_detection::service::BiasDetectionService;
-use crate::modules::mistral_expert::dtos::ModerationResponse;
-use crate::modules::mistral_expert::service::{MistralService, MistralServiceError};
+use crate::modules::mistral_ai::dtos::ModerationResponse;
+use crate::modules::mistral_ai::service::{MistralService, MistralServiceError};
 use crate::modules::prompt_firewall::dtos::{
     FirewallAction, PromptFirewallRequest, PromptFirewallResult,
 };

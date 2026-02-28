@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use axum::{
+    Json, Router,
     extract::State,
     http::StatusCode,
     routing::{get, post},
-    Json, Router,
 };
 use serde_json;
 use tokio::net::TcpListener;
@@ -15,8 +15,8 @@ use crate::config::settings::AppSettings;
 use crate::modules::audit::logger::AuditLogger;
 use crate::modules::audit::storage::{AuditStorage, SledAuditStorage};
 use crate::modules::bias_detection::service::BiasDetectionService;
-use crate::modules::mistral_expert::client::{HttpMistralClient, MistralClient};
-use crate::modules::mistral_expert::service::MistralService;
+use crate::modules::mistral_ai::client::{HttpMistralClient, MistralClient};
+use crate::modules::mistral_ai::service::MistralService;
 use crate::modules::prompt_firewall::service::PromptFirewallService;
 use crate::workflow::{ComplianceEngine, ComplianceRequest, ComplianceResponse};
 
@@ -133,7 +133,7 @@ impl Default for FrameworkConfig {
 
 impl FrameworkConfig {
     /// Initialize the framework with default or custom configuration
-    pub fn initialize(self) -> Result<PromptSentinelServer, Box<dyn std::error::Error>> {
+    pub async fn initialize(self) -> Result<PromptSentinelServer, Box<dyn std::error::Error>> {
         let settings = AppSettings::from_env().unwrap_or_else(|_| AppSettings {
             server_port: self.server_port,
             mistral_api_key: self.mistral_api_key.clone(),
@@ -145,7 +145,8 @@ impl FrameworkConfig {
             max_input_length: 4096,
         });
 
-        let audit_storage: Arc<dyn AuditStorage> = Arc::new(SledAuditStorage::new(&self.sled_db_path)?);
+        let audit_storage: Arc<dyn AuditStorage> =
+            Arc::new(SledAuditStorage::new(&self.sled_db_path)?);
         let audit_logger = AuditLogger::new(audit_storage);
 
         let firewall_service = PromptFirewallService::new(settings.max_input_length);
@@ -163,11 +164,9 @@ impl FrameworkConfig {
 
         // Perform model validation at startup
         info!("Validating Mistral models at startup...");
-        tokio::runtime::Runtime::new()?.block_on(async {
-            mistral_service.validate_all_models().await.map_err(|e| {
-                error!("Model validation failed: {}", e);
-                Box::new(e) as Box<dyn std::error::Error>
-            })
+        mistral_service.validate_all_models().await.map_err(|e| {
+            error!("Model validation failed: {}", e);
+            Box::new(e) as Box<dyn std::error::Error>
         })?;
         info!("All Mistral models validated successfully");
 

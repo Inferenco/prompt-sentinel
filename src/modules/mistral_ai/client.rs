@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use async_trait::async_trait;
-use reqwest::{Client, Error as ReqwestError, StatusCode};
+use reqwest::Client;
 use serde_json::Value;
 use thiserror::Error;
 use tracing::{debug, error, info, warn};
