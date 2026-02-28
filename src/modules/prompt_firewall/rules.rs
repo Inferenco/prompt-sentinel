@@ -431,6 +431,36 @@ fn default_sanitize_patterns() -> Vec<RuleEntry> {
         .collect()
 }
 
+/// Public test helper functions for property testing
+pub mod test_helpers {
+    use super::*;
+
+    /// Test version of canonicalize_for_block_match
+    pub fn test_canonicalize_for_block_match(input: &str) -> String {
+        canonicalize_for_block_match(input)
+    }
+
+    /// Test version of contains_fuzzy_phrase
+    pub fn test_contains_fuzzy_phrase(prompt: &str, pattern: &str, max_distance: usize) -> bool {
+        contains_fuzzy_phrase(prompt, pattern, max_distance)
+    }
+
+    /// Test version of normalize_homoglyphs
+    pub fn test_normalize_homoglyphs(input: &str) -> String {
+        normalize_homoglyphs(input)
+    }
+
+    /// Test version of strip_case_insensitive
+    pub fn test_strip_case_insensitive(input: &str, pattern: &str) -> String {
+        strip_case_insensitive(input, pattern)
+    }
+
+    /// Test version of substitute_leetspeak
+    pub fn test_substitute_leetspeak(ch: char) -> char {
+        substitute_leetspeak(ch)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::canonicalize_for_block_match;

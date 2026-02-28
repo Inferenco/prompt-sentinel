@@ -130,10 +130,10 @@ Test summary (latest run):
 
 ### Pending Tasks:
 1. Add explicit security regression cases for:
-   - prompt injection variants
-   - sanitize-vs-block boundary behavior
-   - bias threshold override behavior
-2. Add `proptest` suite for prompt canonicalization invariants
+   - prompt injection variants ✓ **done**
+   - sanitize-vs-block boundary behavior ✓ **done**
+   - bias threshold override behavior ✓ **done**
+2. Add `proptest` suite for prompt canonicalization invariants ✓ **done**
 3. Add startup `/v1/models` validation in the server lifecycle
 4. Add structured latency/correlation telemetry
 5. Document configuration contracts for:
@@ -180,6 +180,18 @@ Test summary (latest run):
 - Model validation at startup and runtime
 - Detailed logging for debugging and monitoring
 - MIT License for maximum compatibility and adoption
+
+## Testing Enhancements:
+- Property-based testing with `proptest` for canonicalization invariants
+- Comprehensive security regression test cases for prompt injection variants
+- Sanitize-vs-block boundary behavior tests
+- Bias threshold override behavior tests
+- Fuzzy matching edge case testing
+- Unicode normalization and homoglyph handling tests
+- Length limit enforcement tests
+- Bias detection consistency tests
+- Expanded firewall rules to catch comprehensive injection patterns (18 block rules)
+- Test-driven development approach: tests drive firewall rule enhancements
 
 ## Mistral AI Enhancements:
 - **API Response Handling**: Automatic retry mechanism (3 attempts), timeout handling (30s), comprehensive error variants
