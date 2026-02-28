@@ -1,7 +1,11 @@
 {
   "unacceptable": [
     "social scoring",
-    "new prohibited use"
+    "biometric surveillance",
+    "biometric categorization",
+    "emotion recognition in workplace",
+    "emotion recognition in school",
+    "manipulative subliminal"
   ],
   "high": [
     "employment",

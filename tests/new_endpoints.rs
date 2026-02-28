@@ -51,12 +51,18 @@ fn test_compliance_report_generation() {
 #[test]
 fn test_compliance_configuration_management() {
     let service = EuLawComplianceService::default();
-    
+
     // Test getting current configuration
     let current_config = service.get_current_configuration();
-    let _initial_unacceptable_count = current_config.risk_keyword_counts.unacceptable;
-    
-    // Test updating configuration
+    let initial_unacceptable_count = current_config.risk_keyword_counts.unacceptable;
+
+    // Save original keywords to restore later (read from file)
+    let original_config: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string("config/eu_risk_keywords.json")
+            .expect("Failed to read original config")
+    ).expect("Failed to parse original config");
+
+    // Test updating configuration with temporary values
     let update_request = ComplianceConfigurationRequest {
         risk_thresholds: Some(RiskThresholds {
             unacceptable_keywords: Some(vec!["social scoring".to_string(), "new prohibited use".to_string()]),
@@ -67,13 +73,51 @@ fn test_compliance_configuration_management() {
     };
 
     let update_response = service.update_configuration(update_request);
-    
+
     assert_eq!(update_response.status, "success");
     assert!(update_response.message.contains("updated successfully"));
-    
+
     // Verify configuration was updated
     let new_config = service.get_current_configuration();
-    assert_eq!(new_config.risk_keyword_counts.unacceptable, 2); // Should have 2 keywords now
+    assert_eq!(new_config.risk_keyword_counts.unacceptable, 2);
+
+    // Restore original configuration to avoid polluting other tests
+    let restore_request = ComplianceConfigurationRequest {
+        risk_thresholds: Some(RiskThresholds {
+            unacceptable_keywords: Some(
+                original_config["unacceptable"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|v| v.as_str().unwrap().to_string())
+                    .collect()
+            ),
+            high_risk_keywords: Some(
+                original_config["high"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|v| v.as_str().unwrap().to_string())
+                    .collect()
+            ),
+            limited_risk_keywords: Some(
+                original_config["limited"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|v| v.as_str().unwrap().to_string())
+                    .collect()
+            ),
+        }),
+        documentation_requirements: None,
+    };
+
+    let restore_response = service.update_configuration(restore_request);
+    assert_eq!(restore_response.status, "success");
+
+    // Verify restoration
+    let restored_config = service.get_current_configuration();
+    assert_eq!(restored_config.risk_keyword_counts.unacceptable, initial_unacceptable_count);
 }
 
 #[test]

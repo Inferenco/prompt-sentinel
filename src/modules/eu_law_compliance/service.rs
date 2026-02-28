@@ -100,7 +100,7 @@ impl ConfigManager {
     }
 }
 
-/// Global configuration instance
+// Global configuration instance
 lazy_static::lazy_static! {
     static ref CONFIG_MANAGER: ConfigManager = ConfigManager::new();
 }

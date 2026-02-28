@@ -111,27 +111,24 @@ async fn mistral_health_check(
 }
 
 async fn validate_models(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
 ) -> Result<Json<ModelValidationResponse>, (StatusCode, String)> {
     debug!("Received model validation request");
-    
-    let mistral_service = _state.engine.mistral_service();
-    
-    match mistral_service.validate_models_endpoint().await {
-        response => {
-            info!("Model validation completed");
-            Ok(Json(response))
-        }
-    }
+
+    let mistral_service = state.engine.mistral_service();
+    let response = mistral_service.validate_models_endpoint().await;
+
+    info!("Model validation completed");
+    Ok(Json(response))
 }
 
 async fn get_audit_trail(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
     Json(request): Json<AuditTrailRequest>,
 ) -> Result<Json<AuditTrailResponse>, (StatusCode, String)> {
     debug!("Received audit trail request");
-    
-    let audit_logger = _state.engine.audit_logger();
+
+    let audit_logger = state.engine.audit_logger();
     let storage = audit_logger.storage();
     
     match storage.get_with_filters(
