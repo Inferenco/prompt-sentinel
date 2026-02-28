@@ -27,6 +27,6 @@ pub fn log_with_correlation(correlation_id: &str, level: Level, message: &str) {
     }
 }
 
-pub fn create_span_with_correlation(correlation_id: &str, _name: &str) -> tracing::Span {
-    span!(Level::INFO, "request", correlation_id = %correlation_id)
+pub fn create_span_with_correlation(correlation_id: &str, name: &str) -> tracing::Span {
+    span!(Level::INFO, "request", correlation_id = %correlation_id, operation = %name)
 }

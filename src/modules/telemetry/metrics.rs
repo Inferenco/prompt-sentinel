@@ -8,8 +8,13 @@ use once_cell::sync::Lazy;
 pub struct TelemetryMetrics {
     request_counter: AtomicU64,
     error_counter: AtomicU64,
-    latency_histogram: AtomicU64,
     active_requests_gauge: AtomicU64,
+}
+
+impl Default for TelemetryMetrics {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TelemetryMetrics {
@@ -17,24 +22,22 @@ impl TelemetryMetrics {
         Self {
             request_counter: AtomicU64::new(0),
             error_counter: AtomicU64::new(0),
-            latency_histogram: AtomicU64::new(0),
             active_requests_gauge: AtomicU64::new(0),
         }
     }
 
-    pub fn increment_requests(&self, _method: &str, _endpoint: &str) {
+    pub fn increment_requests(&self, method: &str, endpoint: &str) {
         self.request_counter.fetch_add(1, Ordering::SeqCst);
-        counter!("requests_total").increment(1);
+        counter!("requests_total", "method" => method.to_string(), "endpoint" => endpoint.to_string()).increment(1);
     }
 
-    pub fn increment_errors(&self, _error_type: &str) {
+    pub fn increment_errors(&self, error_type: &str) {
         self.error_counter.fetch_add(1, Ordering::SeqCst);
-        counter!("errors_total").increment(1);
+        counter!("errors_total", "error_type" => error_type.to_string()).increment(1);
     }
 
-    pub fn record_latency(&self, _method: &str, _endpoint: &str, duration: f64) {
-        self.latency_histogram.fetch_add(duration as u64, Ordering::SeqCst);
-        histogram!("request_latency_seconds");
+    pub fn record_latency(&self, method: &str, endpoint: &str, duration: f64) {
+        histogram!("request_latency_seconds", "method" => method.to_string(), "endpoint" => endpoint.to_string()).record(duration);
     }
 
     pub fn increment_active_requests(&self) {
@@ -75,7 +78,7 @@ impl RequestTimer {
     }
 }
 
-static METRICS: Lazy<TelemetryMetrics> = Lazy::new(|| TelemetryMetrics::new());
+static METRICS: Lazy<TelemetryMetrics> = Lazy::new(TelemetryMetrics::new);
 
 pub fn get_metrics() -> &'static TelemetryMetrics {
     &METRICS

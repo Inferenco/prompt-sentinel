@@ -52,7 +52,8 @@ async fn telemetry_middleware(
     let mut request = request;
     request.headers_mut().insert(
         "X-Correlation-ID",
-        axum::http::HeaderValue::from_str(&correlation_id).unwrap(),
+        axum::http::HeaderValue::from_str(&correlation_id)
+            .expect("correlation ID should be valid header value"),
     );
 
     // Create span with correlation ID
