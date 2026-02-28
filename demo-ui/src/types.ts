@@ -1,6 +1,6 @@
 export interface ModerationResult {
-    blocked: boolean;
-    score: number;
+    flagged: boolean;
+    severity: number;
     categories: string[];
 }
 
