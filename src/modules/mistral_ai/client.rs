@@ -289,9 +289,10 @@ impl MockMistralClient {
                 "moderation sequence cannot be empty".to_owned(),
             ));
         }
-        let mut client = Self::default();
-        client.moderation_responses = Arc::new(Mutex::new(sequence));
-        Ok(client)
+        Ok(Self {
+            moderation_responses: Arc::new(Mutex::new(sequence)),
+            ..Default::default()
+        })
     }
 
     pub fn with_chat_response(mut self, response: ChatCompletionResponse) -> Self {
