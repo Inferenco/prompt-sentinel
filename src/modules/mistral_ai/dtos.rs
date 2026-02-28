@@ -48,3 +48,18 @@ pub struct EmbeddingResponse {
 pub struct ModelListResponse {
     pub models: Vec<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ModelValidationResponse {
+    pub generation_model: ModelValidationStatus,
+    pub moderation_model: Option<ModelValidationStatus>,
+    pub embedding_model: ModelValidationStatus,
+    pub overall_status: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ModelValidationStatus {
+    pub model_name: String,
+    pub available: bool,
+    pub message: String,
+}

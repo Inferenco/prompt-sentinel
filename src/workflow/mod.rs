@@ -67,6 +67,11 @@ impl ComplianceEngine {
         &self.mistral_service
     }
 
+    /// Get a reference to the audit logger for audit trail access
+    pub fn audit_logger(&self) -> &AuditLogger {
+        &self.audit_logger
+    }
+
     pub async fn process(
         &self,
         request: ComplianceRequest,

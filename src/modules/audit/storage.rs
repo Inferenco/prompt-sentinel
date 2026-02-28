@@ -7,6 +7,23 @@ use thiserror::Error;
 
 use super::proof::AuditProof;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditTrailRequest {
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+    pub start_time: Option<DateTime<Utc>>,
+    pub end_time: Option<DateTime<Utc>>,
+    pub correlation_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditTrailResponse {
+    pub records: Vec<StoredAuditRecord>,
+    pub total_count: usize,
+    pub limit: usize,
+    pub offset: usize,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StoredAuditRecord {
     pub correlation_id: String,
@@ -19,6 +36,14 @@ pub trait AuditStorage: Send + Sync {
     fn append(&self, record: StoredAuditRecord) -> Result<(), AuditStorageError>;
     fn latest_chain_hash(&self) -> Result<Option<String>, AuditStorageError>;
     fn all(&self) -> Result<Vec<StoredAuditRecord>, AuditStorageError>;
+    fn get_with_filters(
+        &self,
+        limit: Option<usize>,
+        offset: Option<usize>,
+        start_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
+        correlation_id: Option<String>,
+    ) -> Result<AuditTrailResponse, AuditStorageError>;
 }
 
 #[derive(Clone, Default)]
@@ -56,6 +81,56 @@ impl AuditStorage for InMemoryAuditStorage {
             .lock()
             .map_err(|_| AuditStorageError::LockPoisoned)?;
         Ok(guard.clone())
+    }
+
+    fn get_with_filters(
+        &self,
+        limit: Option<usize>,
+        offset: Option<usize>,
+        start_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
+        correlation_id: Option<String>,
+    ) -> Result<AuditTrailResponse, AuditStorageError> {
+        let all_records = self.all()?;
+        
+        // Apply time filters
+        let filtered_records: Vec<StoredAuditRecord> = all_records
+            .into_iter()
+            .filter(|record| {
+                let in_time_range = start_time
+                    .as_ref()
+                    .map(|start| record.timestamp >= *start)
+                    .unwrap_or(true)
+                    && end_time
+                        .as_ref()
+                        .map(|end| record.timestamp <= *end)
+                        .unwrap_or(true);
+                
+                let matches_correlation = correlation_id
+                    .as_ref()
+                    .map(|cid| record.correlation_id == *cid)
+                    .unwrap_or(true);
+                
+                in_time_range && matches_correlation
+            })
+            .collect();
+        
+        // Apply pagination
+        let limit = limit.unwrap_or(100);
+        let offset = offset.unwrap_or(0);
+        let total_count = filtered_records.len();
+        let paginated_records: Vec<StoredAuditRecord> = filtered_records
+            .into_iter()
+            .skip(offset)
+            .take(limit)
+            .collect();
+        
+        Ok(AuditTrailResponse {
+            records: paginated_records,
+            total_count,
+            limit,
+            offset,
+        })
     }
 }
 
@@ -135,5 +210,55 @@ impl AuditStorage for SledAuditStorage {
         }
 
         Ok(records)
+    }
+
+    fn get_with_filters(
+        &self,
+        limit: Option<usize>,
+        offset: Option<usize>,
+        start_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
+        correlation_id: Option<String>,
+    ) -> Result<AuditTrailResponse, AuditStorageError> {
+        let all_records = self.all()?;
+        
+        // Apply time filters
+        let filtered_records: Vec<StoredAuditRecord> = all_records
+            .into_iter()
+            .filter(|record| {
+                let in_time_range = start_time
+                    .as_ref()
+                    .map(|start| record.timestamp >= *start)
+                    .unwrap_or(true)
+                    && end_time
+                        .as_ref()
+                        .map(|end| record.timestamp <= *end)
+                        .unwrap_or(true);
+                
+                let matches_correlation = correlation_id
+                    .as_ref()
+                    .map(|cid| record.correlation_id == *cid)
+                    .unwrap_or(true);
+                
+                in_time_range && matches_correlation
+            })
+            .collect();
+        
+        // Apply pagination
+        let limit = limit.unwrap_or(100);
+        let offset = offset.unwrap_or(0);
+        let total_count = filtered_records.len();
+        let paginated_records: Vec<StoredAuditRecord> = filtered_records
+            .into_iter()
+            .skip(offset)
+            .take(limit)
+            .collect();
+        
+        Ok(AuditTrailResponse {
+            records: paginated_records,
+            total_count,
+            limit,
+            offset,
+        })
     }
 }
