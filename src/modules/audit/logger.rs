@@ -59,6 +59,10 @@ impl AuditLogger {
     pub fn records(&self) -> Result<Vec<StoredAuditRecord>, AuditError> {
         self.storage.all().map_err(Into::into)
     }
+
+    pub fn storage(&self) -> &Arc<dyn AuditStorage> {
+        &self.storage
+    }
 }
 
 #[derive(Debug, Error)]

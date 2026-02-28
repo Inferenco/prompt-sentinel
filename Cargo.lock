@@ -951,6 +951,7 @@ dependencies = [
  "chrono",
  "dotenvy",
  "hex",
+ "lazy_static",
  "proptest",
  "reqwest",
  "serde",

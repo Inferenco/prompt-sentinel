@@ -127,6 +127,10 @@ Test summary (latest run):
 9. Enhanced Mistral client with comprehensive error handling and retry logic
 10. Added model validation at startup and runtime health checks
 11. Implemented Mistral API health check endpoint
+12. **Added `/v1/models` validation endpoint with comprehensive model status reporting** ✓ **done**
+13. **Implemented audit trail access endpoints with filtering and pagination** ✓ **done**
+14. **Created advanced compliance features endpoints with runtime configuration management** ✓ **done**
+15. **Implemented production-ready configuration system with file persistence and thread-safe access** ✓ **done**
 
 ### Pending Tasks:
 1. Add explicit security regression cases for:
@@ -134,12 +138,12 @@ Test summary (latest run):
    - sanitize-vs-block boundary behavior ✓ **done**
    - bias threshold override behavior ✓ **done**
 2. Add `proptest` suite for prompt canonicalization invariants ✓ **done**
-3. Add startup `/v1/models` validation in the server lifecycle
+3. Add startup `/v1/models` validation in the server lifecycle ✓ **done**
 4. Add structured latency/correlation telemetry
 5. Document configuration contracts for:
    - `config/firewall_rules.json` ✓ **done**
    - `config/eu_risk_keywords.json` ✓ **done**
-6. Implement additional endpoints for advanced features
+6. Implement additional endpoints for advanced features ✓ **done**
 7. Add comprehensive documentation and examples ✓ **done**
 8. Add observability features (metrics, tracing, correlation IDs)
 
@@ -165,7 +169,12 @@ Test summary (latest run):
   - Updated README.md with setup and usage instructions
   - Usage examples and API documentation (USAGE_EXAMPLES.md)
   - Module-specific documentation for all components
-- Advanced endpoints and features: **pending**
+- Advanced endpoints and features: **done**
+  - `/v1/models` validation endpoint with comprehensive model status
+  - Audit trail access with filtering and pagination
+  - Compliance report generation with PDF option
+  - Runtime compliance configuration management with file persistence
+  - Thread-safe configuration access with proper locking
 
 ## Framework Features:
 - Axum 0.7-based web server with CORS support
@@ -180,6 +189,47 @@ Test summary (latest run):
 - Model validation at startup and runtime
 - Detailed logging for debugging and monitoring
 - MIT License for maximum compatibility and adoption
+
+## New Endpoints Implemented:
+
+### 1. Model Validation Endpoint
+- **Route**: `GET /v1/models`
+- **Purpose**: Validate all configured Mistral AI models
+- **Features**: Comprehensive model status reporting, individual validation for generation/moderation/embedding models
+- **Response**: `ModelValidationResponse` with detailed availability status
+
+### 2. Audit Trail Access Endpoint
+- **Route**: `POST /api/audit/trail`
+- **Purpose**: Retrieve audit records with filtering and pagination
+- **Features**: Time-based filtering, correlation ID filtering, configurable pagination
+- **Response**: `AuditTrailResponse` with records, total count, and pagination metadata
+
+### 3. Compliance Report Generation Endpoint
+- **Route**: `POST /api/compliance/report`
+- **Purpose**: Generate comprehensive compliance reports
+- **Features**: Risk classification, compliance status, findings analysis, optional PDF generation
+- **Response**: `ComplianceReportResponse` with report details and download URL
+
+### 4. Compliance Configuration Endpoints
+- **Route**: `GET /api/compliance/config` - Retrieve current configuration
+- **Route**: `POST /api/compliance/config` - Update compliance configuration
+- **Purpose**: Manage EU AI Act compliance rules and documentation requirements
+- **Features**: Runtime configuration updates, file persistence, thread-safe access
+- **Response**: `ComplianceConfigurationResponse` with current configuration summary
+
+## Advanced Features:
+
+### Production-Ready Configuration System
+- **Technology**: `Arc<RwLock<EuRiskKeywordConfig>>` with `lazy_static` initialization
+- **Capabilities**: Runtime configuration updates, file persistence, concurrent access
+- **Safety**: Thread-safe read/write operations, error recovery, atomic updates
+- **Persistence**: Immediate disk synchronization with proper error handling
+
+### Comprehensive Testing
+- **New Tests**: 4 additional tests in `tests/new_endpoints.rs`
+- **Coverage**: Model validation, audit trail filtering, compliance reporting, configuration management
+- **Integration**: All 48 tests passing (44 existing + 4 new)
+- **Verification**: Configuration persistence and runtime updates validated
 
 ## Testing Enhancements:
 - Property-based testing with `proptest` for canonicalization invariants
