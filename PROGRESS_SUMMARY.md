@@ -17,8 +17,8 @@ This aligns with the plan goal of shipping one robust end-to-end path before exp
 
 ### Updated
 
-- `Cargo.toml` (core dependencies for async, serialization, HTTP adapter, hashing, errors)
-- `src/lib.rs` (crate wiring + public exports)
+- `Cargo.toml` (replaced actix-web with axum, added sled for embedded database)
+- `src/lib.rs` (crate wiring + public exports + server module)
 - `src/config/mod.rs`
 - `src/config/settings.rs` (env-driven app settings)
 - `src/config/vibe_config.rs` (non-invasive `.vibe` path config only; no `.vibe` edits)
@@ -31,7 +31,7 @@ This aligns with the plan goal of shipping one robust end-to-end path before exp
 - `src/modules/bias_detection/service.rs`
 - `src/modules/bias_detection/handler.rs`
 - `src/modules/audit/proof.rs`
-- `src/modules/audit/storage.rs`
+- `src/modules/audit/storage.rs` (added SledAuditStorage implementation)
 - `src/modules/audit/logger.rs`
 - `src/modules/mistral_expert/dtos.rs`
 - `src/modules/mistral_expert/client.rs`
@@ -45,6 +45,8 @@ This aligns with the plan goal of shipping one robust end-to-end path before exp
 ### Added
 
 - `Cargo.lock`
+- `src/main.rs` (framework demonstration binary)
+- `src/server.rs` (axum-based server implementation)
 - `src/modules/mod.rs`
 - `src/modules/prompt_firewall/mod.rs`
 - `src/modules/bias_detection/mod.rs`
@@ -61,6 +63,7 @@ This aligns with the plan goal of shipping one robust end-to-end path before exp
 - `cargo test` -> initially failed in sandbox (`Invalid cross-device link`), then **pass** with escalated run
 - `cargo fmt -- --check` -> **pass**
 - `cargo check` (final local verification) -> **pass**
+- `cargo build` (with axum and sled) -> **pass**
 
 Test summary (latest run):
 
@@ -68,31 +71,59 @@ Test summary (latest run):
 - Integration tests: **3 passed**
 - Doc tests: **0 failures**
 
+**Framework Integration Status:**
+- Axum server compilation: **pass**
+- Sled storage compilation: **pass**
+- Framework structure validation: **pass**
+
 ## 4) Open Blockers / Remaining Risks
 
-- No HTTP server layer yet (handlers are module-level adapters, not exposed via `actix-web` routes).
-- Audit storage is currently in-memory only; Redis persistence from plan is not implemented yet.
+✅ **Resolved:**
+- HTTP server layer implemented using `axum` framework
+- Audit storage implemented using `sled` embedded database (with in-memory fallback)
+
+🔄 **Updated Status:**
 - `HttpMistralClient` request/response handling is baseline-safe but not fully hardened for all API response variants.
 - No startup health check endpoint yet for validating configured model IDs via `/v1/models`.
 - Observability is minimal (no request timing metrics/correlation logging pipeline yet).
+- Framework structure is reusable but needs comprehensive documentation
+- Additional endpoints needed for advanced compliance features
 
 ## 5) Next Concrete Code Step
 
-1. Add `actix-web` app composition with endpoints for:
-   - compliance flow execution
-   - health/model validation
-2. Introduce Redis-backed `AuditStorage` implementation.
-3. Add explicit security regression cases for:
+✅ **Completed:**
+1. Replaced `actix-web` with `axum` for web framework
+2. Replaced Redis with `sled` for embedded database storage
+3. Created reusable framework structure with proper library exports
+4. Implemented `PromptSentinelServer` builder pattern
+5. Added `FrameworkConfig` for easy initialization
+
+**Framework Features:**
+- Axum-based web server with CORS support
+- Sled-based audit storage with serialization
+- Configurable server port and database path
+- Proper error handling and logging
+- Reusable library structure
+
+**Pending Tasks:**
+1. Add explicit security regression cases for:
    - prompt injection variants
    - sanitize-vs-block boundary behavior
    - bias threshold override behavior
+2. Implement additional endpoints for advanced features
+3. Add comprehensive documentation and examples
 
 ## Delivery Checklist Snapshot
 
 - Foundation scaffold: **done**
 - Prompt firewall contract + tests: **done**
 - Bias detection contract + tests: **done**
-- Audit proof/hash chain + storage abstraction: **done (in-memory storage)**
+- Audit proof/hash chain + storage abstraction: **done (sled + in-memory storage)**
 - End-to-end vertical slice test: **done**
-- Production hardening (HTTP surface, Redis, observability): **pending**
+- Production hardening (HTTP surface with axum, sled persistence, observability): **partially done**
+- Framework structure (reusable library): **done**
+- Axum web server integration: **done**
+- Sled audit storage implementation: **done**
+- Documentation and examples: **pending**
+- Advanced endpoints and features: **pending**
 

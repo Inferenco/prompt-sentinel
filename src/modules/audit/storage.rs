@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sled::Db;
 use thiserror::Error;
 
 use super::proof::AuditProof;
@@ -62,4 +63,65 @@ impl AuditStorage for InMemoryAuditStorage {
 pub enum AuditStorageError {
     #[error("audit storage lock poisoned")]
     LockPoisoned,
+    #[error("database error: {0}")]
+    DatabaseError(String),
+    #[error("serialization error: {0}")]
+    SerializationError(String),
+}
+
+#[derive(Clone)]
+pub struct SledAuditStorage {
+    db: Db,
+}
+
+impl SledAuditStorage {
+    pub fn new(db_path: &str) -> Result<Self, AuditStorageError> {
+        let db = sled::open(db_path)
+            .map_err(|e| AuditStorageError::DatabaseError(e.to_string()))?;
+        Ok(Self { db })
+    }
+}
+
+impl AuditStorage for SledAuditStorage {
+    fn append(&self, record: StoredAuditRecord) -> Result<(), AuditStorageError> {
+        let serialized = serde_json::to_string(&record)
+            .map_err(|e| AuditStorageError::SerializationError(e.to_string()))?;
+        
+        let id = record.correlation_id.clone();
+        self.db.insert(id, serialized.as_bytes())
+            .map_err(|e| AuditStorageError::DatabaseError(e.to_string()))?;
+        
+        self.db.flush()
+            .map_err(|e| AuditStorageError::DatabaseError(e.to_string()))?;
+            
+        Ok(())
+    }
+
+    fn latest_chain_hash(&self) -> Result<Option<String>, AuditStorageError> {
+        let mut iter = self.db.iter();
+        let last_record = iter.next_back()
+            .map_err(|e| AuditStorageError::DatabaseError(e.to_string()))?;
+        
+        match last_record {
+            Some((_, data)) => {
+                let record: StoredAuditRecord = serde_json::from_slice(&data)
+                    .map_err(|e| AuditStorageError::SerializationError(e.to_string()))?;
+                Ok(Some(record.proof.chain_hash))
+            }
+            None => Ok(None)
+        }
+    }
+
+    fn all(&self) -> Result<Vec<StoredAuditRecord>, AuditStorageError> {
+        let mut records = Vec::new();
+        
+        for result in self.db.iter() {
+            let (_, data) = result.map_err(|e| AuditStorageError::DatabaseError(e.to_string()))?;
+            let record: StoredAuditRecord = serde_json::from_slice(&data)
+                .map_err(|e| AuditStorageError::SerializationError(e.to_string()))?;
+            records.push(record);
+        }
+        
+        Ok(records)
+    }
 }
