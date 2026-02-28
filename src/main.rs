@@ -3,6 +3,9 @@ use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Load environment variables from .env file
+    dotenvy::dotenv().ok();
+
     // Initialize tracing
     tracing_subscriber::fmt::init();
 

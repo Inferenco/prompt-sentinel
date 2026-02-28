@@ -29,9 +29,8 @@ impl AppSettings {
                 .unwrap_or_else(|_| "https://api.mistral.ai".to_owned()),
             generation_model: env::var("MISTRAL_GENERATION_MODEL")
                 .unwrap_or_else(|_| "mistral-large-latest".to_owned()),
-            moderation_model: env::var("MISTRAL_MODERATION_MODEL")
-                .ok()
-                .filter(|v| !v.is_empty()),
+            moderation_model: Some(env::var("MISTRAL_MODERATION_MODEL")
+                .unwrap_or_else(|_| "mistral-moderation-latest".to_owned())),
             embedding_model: env::var("MISTRAL_EMBEDDING_MODEL")
                 .unwrap_or_else(|_| "mistral-embed".to_owned()),
             bias_threshold,

@@ -1,2 +1,21 @@
+# Rust build target
 /target
+Cargo.lock
+
+# Environment
 .env
+.env.*
+!.env.example
+
+# Local databases
+prompt_sentinel_data/
+*.db
+
+# Node build and packages
+node_modules/
+dist/
+dist-ssr/
+
+# OS generated files
+.DS_Store
+Thumbs.db
