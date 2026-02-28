@@ -171,8 +171,16 @@ pub struct PromptFirewallService {
       "pattern": "ignore all previous instructions"
     },
     {
+      "id": "PFW-001C",
+      "pattern": "disregard previous instructions"
+    },
+    {
       "id": "PFW-002",
       "pattern": "reveal system prompt"
+    },
+    {
+      "id": "PFW-002B",
+      "pattern": "print system prompt"
     },
     {
       "id": "PFW-003",
@@ -772,8 +780,8 @@ The module implements the four risk tiers defined in the EU AI Act:
 **API Methods:**
 
 ```rust
-// Create compliance service
-let compliance_service = EuLawComplianceService::new();
+// Create compliance service (uses Default trait)
+let compliance_service = EuLawComplianceService::default();
 
 // Check compliance
 let request = ComplianceCheckRequest {
@@ -898,8 +906,8 @@ use prompt_sentinel::modules::eu_law_compliance::service::EuLawComplianceService
 use prompt_sentinel::modules::eu_law_compliance::dtos::ComplianceCheckRequest;
 
 fn check_eu_compliance() {
-    // Create compliance service
-    let service = EuLawComplianceService::new();
+    // Create compliance service (uses Default trait)
+    let service = EuLawComplianceService::default();
     
     // Test different use cases
     let test_cases = vec![
@@ -924,10 +932,10 @@ fn check_eu_compliance() {
     ];
     
     for (i, request) in test_cases.into_iter().enumerate() {
-        let result = service.check(request);
-        
+        let result = service.check(request.clone());
+
         println!("\nTest Case {}:", i + 1);
-        println!("Intended Use: {}", result.intended_use);
+        println!("Intended Use: {}", request.intended_use);
         println!("Risk Tier: {:?}", result.risk_tier);
         println!("Compliant: {}", result.compliant);
         
@@ -944,16 +952,13 @@ fn check_eu_compliance() {
 **Integration Example:**
 
 ```rust
-use prompt_sentinel::workflow::{ComplianceEngine, ComplianceRequest};
+use prompt_sentinel::modules::eu_law_compliance::service::EuLawComplianceService;
+use prompt_sentinel::modules::eu_law_compliance::dtos::ComplianceCheckRequest;
 
-async fn check_eu_compliance_in_workflow(engine: &ComplianceEngine, prompt: &str, use_case: &str) {
-    let request = ComplianceRequest {
-        correlation_id: None,
-        prompt: prompt.to_string(),
-    };
-    
-    let response = engine.process(request).await.unwrap();
-    
+fn check_eu_compliance(use_case: &str) {
+    // Create EU compliance service
+    let eu_service = EuLawComplianceService::default();
+
     // Check EU compliance based on use case
     let eu_request = ComplianceCheckRequest {
         intended_use: use_case.to_string(),
@@ -961,14 +966,13 @@ async fn check_eu_compliance_in_workflow(engine: &ComplianceEngine, prompt: &str
         transparency_notice_available: true,
         copyright_controls_available: true,
     };
-    
-    let eu_service = engine.eu_compliance_service();
+
     let eu_result = eu_service.check(eu_request);
-    
+
     println!("EU AI Act Compliance:");
     println!("  Risk Tier: {:?}", eu_result.risk_tier);
     println!("  Compliant: {}", eu_result.compliant);
-    
+
     if !eu_result.compliant {
         println!("  Issues:");
         for finding in eu_result.findings {
@@ -1006,7 +1010,7 @@ async fn check_eu_compliance_in_workflow(engine: &ComplianceEngine, prompt: &str
 ```rust
 #[test]
 fn test_eu_compliance() {
-    let service = EuLawComplianceService::new();
+    let service = EuLawComplianceService::default();
     
     // Test unacceptable use case
     let unacceptable = ComplianceCheckRequest {
@@ -1420,9 +1424,9 @@ Check a prompt for compliance with all framework rules.
   },
   "generated_text": "AI response text",
   "audit_proof": {
-    "audit_id": "uuid",
-    "timestamp": "iso8601",
-    "signature": "base64"
+    "algorithm": "sha256",
+    "record_hash": "hex-encoded-hash",
+    "chain_hash": "hex-encoded-chain-hash"
   }
 }
 ```
