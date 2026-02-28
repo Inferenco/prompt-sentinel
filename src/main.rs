@@ -1,4 +1,4 @@
-use prompt_sentinel::{FrameworkConfig, PromptSentinelServer};
+use prompt_sentinel::FrameworkConfig;
 use tracing::info;
 
 #[tokio::main]
