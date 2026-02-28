@@ -230,7 +230,7 @@ impl FrameworkConfig {
             mistral_api_key: self.mistral_api_key.clone(),
             mistral_base_url: "https://api.mistral.ai".to_string(),
             generation_model: "mistral-large-latest".to_string(),
-            moderation_model: None,
+            moderation_model: Some("mistral-moderation-latest".to_string()),
             embedding_model: "mistral-embed".to_string(),
             bias_threshold: 0.35,
             max_input_length: 4096,
