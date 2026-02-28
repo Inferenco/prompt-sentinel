@@ -21,11 +21,58 @@ use crate::modules::mistral_ai::client::{HttpMistralClient, MistralClient};
 use crate::modules::mistral_ai::dtos::ModelValidationResponse;
 use crate::modules::mistral_ai::service::MistralService;
 use crate::modules::prompt_firewall::service::PromptFirewallService;
+use crate::modules::telemetry::correlation::generate_correlation_id;
+use crate::modules::telemetry::metrics::{get_metrics, RequestTimer};
+use crate::modules::telemetry::tracing::{log_with_correlation, create_span_with_correlation};
 use crate::workflow::{ComplianceEngine, ComplianceRequest, ComplianceResponse};
 
 #[derive(Clone)]
 pub struct AppState {
     pub engine: Arc<ComplianceEngine>,
+}
+
+/// Telemetry middleware for request tracking
+async fn telemetry_middleware(
+    request: axum::http::Request<axum::body::Body>,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let method = request.method().clone();
+    let path = request.uri().path().to_string();
+    let endpoint = format!("{}:{}", method, path);
+
+    // Generate correlation ID
+    let correlation_id = generate_correlation_id();
+
+    // Start timer and increment active requests
+    let timer = RequestTimer::new();
+    get_metrics().increment_active_requests();
+    get_metrics().increment_requests(method.as_str(), &endpoint);
+
+    // Add correlation ID to request headers
+    let mut request = request;
+    request.headers_mut().insert(
+        "X-Correlation-ID",
+        axum::http::HeaderValue::from_str(&correlation_id)
+            .expect("correlation ID should be valid header value"),
+    );
+
+    // Create span with correlation ID
+    let span = create_span_with_correlation(&correlation_id, "request");
+    let _enter = span.enter();
+
+    log_with_correlation(&correlation_id, tracing::Level::INFO, &format!("Request started: {} {}", method, path));
+
+    // Process request
+    let response = next.run(request).await;
+
+    // Record metrics
+    let duration = timer.elapsed_seconds();
+    get_metrics().record_latency(method.as_str(), &endpoint, duration);
+    get_metrics().decrement_active_requests();
+
+    log_with_correlation(&correlation_id, tracing::Level::INFO, &format!("Request completed: {} {} in {:.3}s", method, path, duration));
+
+    response
 }
 
 /// Framework server builder
@@ -62,6 +109,7 @@ impl PromptSentinelServer {
                     .allow_methods(Any)
                     .allow_headers(Any),
             )
+            .route_layer(axum::middleware::from_fn(telemetry_middleware))
             .with_state(self.state.clone())
     }
 
@@ -80,19 +128,22 @@ impl PromptSentinelServer {
 }
 
 async fn health_check() -> &'static str {
+    let correlation_id = generate_correlation_id();
+    log_with_correlation(&correlation_id, tracing::Level::INFO, "Health check requested");
     "OK"
 }
 
 async fn mistral_health_check(
     State(state): State<AppState>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    debug!("Received Mistral health check request");
+    let correlation_id = generate_correlation_id();
+    log_with_correlation(&correlation_id, tracing::Level::DEBUG, "Received Mistral health check request");
     
     let mistral_service = state.engine.mistral_service();
     
     match mistral_service.health_check().await {
         Ok(_) => {
-            info!("Mistral health check passed");
+            log_with_correlation(&correlation_id, tracing::Level::INFO, "Mistral health check passed");
             Ok(Json(serde_json::json!({
                 "status": "healthy",
                 "message": "Mistral API integration is operational",
@@ -104,7 +155,8 @@ async fn mistral_health_check(
             })))
         }
         Err(e) => {
-            error!("Mistral health check failed: {}", e);
+            log_with_correlation(&correlation_id, tracing::Level::ERROR, &format!("Mistral health check failed: {}", e));
+            get_metrics().increment_errors("mistral_health_check");
             Err((StatusCode::SERVICE_UNAVAILABLE, format!("Mistral API unhealthy: {}", e)))
         }
     }
