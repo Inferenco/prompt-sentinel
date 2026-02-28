@@ -11,8 +11,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Use default configuration (port 3000, sled db at "prompt_sentinel_data")
     let config = FrameworkConfig::default();
 
-    // Initialize the framework
-    let server = config.initialize()?;
+    // Initialize the framework (now async)
+    let server = config.initialize().await?;
 
     // Start the server
     server.start().await?;

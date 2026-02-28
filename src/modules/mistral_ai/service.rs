@@ -1,0 +1,177 @@
+use std::sync::Arc;
+
+use thiserror::Error;
+use tracing::{debug, error, info, warn};
+
+use super::client::{MistralClient, MistralClientError};
+use super::dtos::{
+    ChatCompletionRequest, ChatCompletionResponse, ChatMessage, EmbeddingRequest,
+    EmbeddingResponse, ModerationRequest, ModerationResponse,
+};
+
+#[derive(Clone)]
+pub struct MistralService {
+    client: Arc<dyn MistralClient>,
+    generation_model: String,
+    moderation_model: Option<String>,
+    embedding_model: String,
+}
+
+impl MistralService {
+    pub fn new(
+        client: Arc<dyn MistralClient>,
+        generation_model: impl Into<String>,
+        moderation_model: Option<String>,
+        embedding_model: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            generation_model: generation_model.into(),
+            moderation_model,
+            embedding_model: embedding_model.into(),
+        }
+    }
+
+    pub async fn validate_generation_model(&self) -> Result<(), MistralServiceError> {
+        info!("Validating generation model: {}", self.generation_model);
+        let models = self.client.list_models().await?;
+        if models
+            .models
+            .iter()
+            .any(|model| model == &self.generation_model)
+        {
+            debug!("Generation model validated successfully");
+            return Ok(());
+        }
+        error!("Generation model not found: {}", self.generation_model);
+        Err(MistralServiceError::UnknownModel(
+            self.generation_model.clone(),
+        ))
+    }
+
+    pub async fn validate_moderation_model(&self) -> Result<(), MistralServiceError> {
+        if let Some(model) = &self.moderation_model {
+            info!("Validating moderation model: {}", model);
+            let models = self.client.list_models().await?;
+            if models.models.iter().any(|m| m == model) {
+                debug!("Moderation model validated successfully");
+                return Ok(());
+            }
+            error!("Moderation model not found: {}", model);
+            Err(MistralServiceError::UnknownModel(model.clone()))
+        } else {
+            warn!("No moderation model configured");
+            Ok(())
+        }
+    }
+
+    pub async fn validate_embedding_model(&self) -> Result<(), MistralServiceError> {
+        info!("Validating embedding model: {}", self.embedding_model);
+        let models = self.client.list_models().await?;
+        if models
+            .models
+            .iter()
+            .any(|model| model == &self.embedding_model)
+        {
+            debug!("Embedding model validated successfully");
+            return Ok(());
+        }
+        error!("Embedding model not found: {}", self.embedding_model);
+        Err(MistralServiceError::UnknownModel(
+            self.embedding_model.clone(),
+        ))
+    }
+
+    pub async fn validate_all_models(&self) -> Result<(), MistralServiceError> {
+        info!("Starting comprehensive model validation");
+        self.validate_generation_model().await?;
+        self.validate_moderation_model().await?;
+        self.validate_embedding_model().await?;
+        info!("All models validated successfully");
+        Ok(())
+    }
+
+    pub async fn moderate_text(
+        &self,
+        input: impl Into<String>,
+    ) -> Result<ModerationResponse, MistralServiceError> {
+        debug!("Moderating text with model: {:?}", self.moderation_model);
+        let request = ModerationRequest {
+            model: self.moderation_model.clone(),
+            input: input.into(),
+        };
+        self.client.moderate(request).await.map_err(Into::into)
+    }
+
+    pub async fn generate_text(
+        &self,
+        prompt: impl Into<String>,
+        safe_prompt: bool,
+    ) -> Result<ChatCompletionResponse, MistralServiceError> {
+        debug!("Generating text with model: {}", self.generation_model);
+        let request = ChatCompletionRequest {
+            model: self.generation_model.clone(),
+            messages: vec![ChatMessage {
+                role: "user".to_owned(),
+                content: prompt.into(),
+            }],
+            safe_prompt,
+        };
+        self.client
+            .chat_completion(request)
+            .await
+            .map_err(Into::into)
+    }
+
+    pub async fn embed_text(
+        &self,
+        text: impl Into<String>,
+    ) -> Result<EmbeddingResponse, MistralServiceError> {
+        debug!("Creating embeddings with model: {}", self.embedding_model);
+        let request = EmbeddingRequest {
+            model: self.embedding_model.clone(),
+            input: text.into(),
+        };
+        self.client.embeddings(request).await.map_err(Into::into)
+    }
+
+    pub async fn health_check(&self) -> Result<(), MistralServiceError> {
+        info!("Performing Mistral API health check");
+        
+        // Test API connectivity by listing models
+        let models = self.client.list_models().await?;
+        if models.models.is_empty() {
+            error!("Health check failed: no models available");
+            return Err(MistralServiceError::Client(
+                MistralClientError::InvalidResponse("No models available".to_owned())
+            ));
+        }
+        
+        // Validate all configured models
+        self.validate_all_models().await?;
+        
+        debug!("Health check passed: API and models are available");
+        Ok(())
+    }
+
+    /// Getter methods for model names (used in health checks)
+    pub fn generation_model(&self) -> &str {
+        &self.generation_model
+    }
+
+    pub fn moderation_model(&self) -> Option<&String> {
+        self.moderation_model.as_ref()
+    }
+
+    pub fn embedding_model(&self) -> &str {
+        &self.embedding_model
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum MistralServiceError {
+    #[error("mistral client error: {0}")]
+    Client(#[from] MistralClientError),
+    #[error("configured generation model is unavailable: {0}")]
+    UnknownModel(String),
+}

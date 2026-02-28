@@ -46,7 +46,7 @@ You are an expert in **Mistral AI models and API integration** using the Mistral
 **Implementation Requirements:**
 
 ```rust
-// Required implementation in src/modules/mistral_expert/mod.rs
+// Required implementation in src/modules/mistral_ai/mod.rs
 
 pub async fn generate_completion(prompt: &str) -> Result<CompletionResult, MistralError> {
     // Load API configuration

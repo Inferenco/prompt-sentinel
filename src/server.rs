@@ -6,16 +6,17 @@ use axum::{
     http::StatusCode,
     routing::{get, post},
 };
+use serde_json;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
-use tracing::info;
+use tracing::{debug, error, info};
 
 use crate::config::settings::AppSettings;
 use crate::modules::audit::logger::AuditLogger;
 use crate::modules::audit::storage::{AuditStorage, SledAuditStorage};
 use crate::modules::bias_detection::service::BiasDetectionService;
-use crate::modules::mistral_expert::client::{HttpMistralClient, MistralClient};
-use crate::modules::mistral_expert::service::MistralService;
+use crate::modules::mistral_ai::client::{HttpMistralClient, MistralClient};
+use crate::modules::mistral_ai::service::MistralService;
 use crate::modules::prompt_firewall::service::PromptFirewallService;
 use crate::workflow::{ComplianceEngine, ComplianceRequest, ComplianceResponse};
 
@@ -46,6 +47,7 @@ impl PromptSentinelServer {
         Router::new()
             .route("/api/compliance/check", post(check_compliance))
             .route("/health", get(health_check))
+            .route("/api/mistral/health", get(mistral_health_check))
             .layer(
                 CorsLayer::new()
                     .allow_origin(Any)
@@ -71,6 +73,33 @@ impl PromptSentinelServer {
 
 async fn health_check() -> &'static str {
     "OK"
+}
+
+async fn mistral_health_check(
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    debug!("Received Mistral health check request");
+    
+    let mistral_service = state.engine.mistral_service();
+    
+    match mistral_service.health_check().await {
+        Ok(_) => {
+            info!("Mistral health check passed");
+            Ok(Json(serde_json::json!({
+                "status": "healthy",
+                "message": "Mistral API integration is operational",
+                "models": [
+                    mistral_service.generation_model(),
+                    mistral_service.moderation_model(),
+                    mistral_service.embedding_model()
+                ]
+            })))
+        }
+        Err(e) => {
+            error!("Mistral health check failed: {}", e);
+            Err((StatusCode::SERVICE_UNAVAILABLE, format!("Mistral API unhealthy: {}", e)))
+        }
+    }
 }
 
 async fn check_compliance(
@@ -104,7 +133,7 @@ impl Default for FrameworkConfig {
 
 impl FrameworkConfig {
     /// Initialize the framework with default or custom configuration
-    pub fn initialize(self) -> Result<PromptSentinelServer, Box<dyn std::error::Error>> {
+    pub async fn initialize(self) -> Result<PromptSentinelServer, Box<dyn std::error::Error>> {
         let settings = AppSettings::from_env().unwrap_or_else(|_| AppSettings {
             server_port: self.server_port,
             mistral_api_key: self.mistral_api_key.clone(),
@@ -132,6 +161,14 @@ impl FrameworkConfig {
             settings.moderation_model.clone(),
             settings.embedding_model.clone(),
         );
+
+        // Perform model validation at startup
+        info!("Validating Mistral models at startup...");
+        mistral_service.validate_all_models().await.map_err(|e| {
+            error!("Model validation failed: {}", e);
+            Box::new(e) as Box<dyn std::error::Error>
+        })?;
+        info!("All Mistral models validated successfully");
 
         let engine = ComplianceEngine::new(
             firewall_service,

@@ -5,9 +5,9 @@ use prompt_sentinel::ComplianceRequest;
 use prompt_sentinel::modules::audit::logger::AuditLogger;
 use prompt_sentinel::modules::audit::storage::{AuditStorage, InMemoryAuditStorage};
 use prompt_sentinel::modules::bias_detection::service::BiasDetectionService;
-use prompt_sentinel::modules::mistral_expert::client::MockMistralClient;
-use prompt_sentinel::modules::mistral_expert::dtos::{ChatCompletionResponse, ModerationResponse};
-use prompt_sentinel::modules::mistral_expert::service::MistralService;
+use prompt_sentinel::modules::mistral_ai::client::MockMistralClient;
+use prompt_sentinel::modules::mistral_ai::dtos::{ChatCompletionResponse, ModerationResponse};
+use prompt_sentinel::modules::mistral_ai::service::MistralService;
 use prompt_sentinel::modules::prompt_firewall::service::PromptFirewallService;
 use prompt_sentinel::workflow::WorkflowStatus;
 

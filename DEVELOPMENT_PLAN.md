@@ -39,7 +39,7 @@ project_root/
 │   │   │   ├── dtos.rs
 │   │   │   ├── service.rs
 │   │   │   └── model.rs
-│   │   ├── mistral_expert/ # Mistral integration
+│   │   ├── mistral_ai/ # Mistral integration
 │   │   │   ├── handler.rs
 │   │   │   ├── dtos.rs
 │   │   │   ├── service.rs
@@ -102,7 +102,7 @@ The `.vibe/` directory contains all Mistral Vibe configurations:
 - Ensures copyright compliance
 - Provides transparency information
 
-#### Mistral Expert Module
+#### Mistral AI Module
 
 **Files:**
 
@@ -286,7 +286,7 @@ pub async fn check_compliance(model_info: &ModelInfo) -> Result<ComplianceResult
 #### Mistral Expert Module
 
 ```rust
-// src/modules/mistral_expert/client.rs
+// src/modules/mistral_ai/client.rs
 
 pub async fn generate_completion(prompt: &str) -> Result<CompletionResult, MistralError> {
     let client = reqwest::Client::new();
