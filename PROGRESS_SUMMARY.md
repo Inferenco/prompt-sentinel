@@ -5,126 +5,83 @@ Repo: `prompt-sentinel`
 
 ## 1) Current Milestone And Objective
 
-**Milestone reached:** Foundation + first vertical slice + framework integration fixes.
+**Milestone reached:** Security hardening expansion for the compliance path (Owner 2 lane).
 
-Implemented a compilable Rust architecture that executes a full compliance request path:
+Current objective completed:
+
+- Harden prompt firewall evasion resistance
+- Expand EU compliance classification depth
+- Add regression coverage for injection and bias-threshold boundaries
+- Keep the existing end-to-end workflow stable:
 
 `prompt firewall -> bias detection -> moderation/generation adapters -> immutable audit proof`
-
-This aligns with the plan goal of shipping one robust end-to-end path before expanding optional features.
 
 ## 2) Files Created/Updated
 
 ### Updated
 
-- `Cargo.toml` (axum 0.7, sled, tracing-subscriber, tokio with net feature)
-- `src/lib.rs` (crate wiring + public exports + server module)
-- `src/config/mod.rs`
-- `src/config/settings.rs` (env-driven app settings + server_port field)
-- `src/config/vibe_config.rs` (non-invasive `.vibe` path config only; no `.vibe` edits)
-- `src/modules/prompt_firewall/dtos.rs`
 - `src/modules/prompt_firewall/rules.rs`
+  - Added Unicode homoglyph normalization, zero-width stripping, leetspeak folding, bounded fuzzy matching, and external JSON rule loading with env override (`PROMPT_FIREWALL_RULES_PATH`)
 - `src/modules/prompt_firewall/service.rs`
-- `src/modules/prompt_firewall/handler.rs`
-- `src/modules/bias_detection/model.rs`
-- `src/modules/bias_detection/dtos.rs`
+  - Added sanitize-vs-block boundary regression
 - `src/modules/bias_detection/service.rs`
-- `src/modules/bias_detection/handler.rs`
-- `src/modules/audit/proof.rs`
-- `src/modules/audit/storage.rs` (SledAuditStorage with timestamp-prefixed keys for ordering)
-- `src/modules/audit/logger.rs`
-- `src/modules/mistral_expert/dtos.rs`
-- `src/modules/mistral_expert/client.rs`
-- `src/modules/mistral_expert/service.rs`
-- `src/modules/mistral_expert/handler.rs`
-- `src/modules/eu_law_compliance/model.rs`
-- `src/modules/eu_law_compliance/dtos.rs`
+  - Added threshold normalization docs and NaN-safe behavior tests
 - `src/modules/eu_law_compliance/service.rs`
-- `src/modules/eu_law_compliance/handler.rs`
+  - Externalized risk-tier keywords to JSON with env override (`PROMPT_SENTINEL_EU_KEYWORDS_PATH`)
+  - Added broader keyword classification support
 
 ### Added
 
-- `Cargo.lock`
-- `src/main.rs` (framework demonstration binary)
-- `src/server.rs` (axum 0.7-based server with proper state management)
-- `src/modules/mod.rs`
-- `src/modules/prompt_firewall/mod.rs`
-- `src/modules/bias_detection/mod.rs`
-- `src/modules/audit/mod.rs`
-- `src/modules/mistral_expert/mod.rs`
-- `src/modules/eu_law_compliance/mod.rs`
-- `src/workflow/mod.rs` (end-to-end orchestration engine + typed workflow result/status)
-- `tests/compliance_flow.rs` (integration coverage for full path and regressions)
+- `config/firewall_rules.json` (runtime-editable firewall block/sanitize rules + fuzzy config)
+- `config/eu_risk_keywords.json` (runtime-editable EU risk-tier keywords)
+- `tests/security_regressions.rs`
+- `tests/eu_compliance_rules.rs`
+- `tests/firewall_benchmark.rs` (ignored by default; can be run explicitly)
 
 ## 3) Commands Run And Status
 
-- `cargo fmt` -> **pass**
+- `cargo fmt --check` -> **pass**
 - `cargo check` -> **pass**
 - `cargo test` -> **pass**
-- `cargo build` -> **pass**
+- `cargo test --test firewall_benchmark -- --ignored` -> **pass**
 
 Test summary (latest run):
 
-- Unit tests: **5 passed**
-- Integration tests: **3 passed**
+- Unit tests (`src/lib.rs`): **10 passed**
+- Integration tests (`tests/` normal run): **17 passed**
+  - `compliance_flow`: 3
+  - `eu_compliance_rules`: 5
+  - `security_regressions`: 9
+- Ignored benchmark tests run explicitly: **1 passed**
 - Doc tests: **0 failures**
 
-**Framework Integration Status:**
-- Axum 0.7 server compilation: **pass**
-- Sled storage compilation: **pass**
-- Framework structure validation: **pass**
+Resolved during this iteration:
+- Fixed fuzzy matcher false negative for typo-based injection phrase variants
+- Re-ran and passed full suite after patch
 
 ## 4) Open Blockers / Remaining Risks
 
-### Resolved (this session):
-- Fixed axum 0.7 API usage (`TcpListener::bind()` + `axum::serve()`)
-- Fixed health endpoint (changed from POST to GET)
-- Fixed sled key ordering (timestamp-prefixed keys for chronological retrieval)
-- Fixed type mismatches (`Arc<dyn AuditStorage>`, `Arc<dyn MistralClient>`)
-- Added missing `tracing-subscriber` dependency
-- Added `server_port` field to `AppSettings`
-- Properly wired `ComplianceEngine` into axum app state
-
-### Remaining:
-- `HttpMistralClient` request/response handling is baseline-safe but not fully hardened for all API response variants
-- No startup health check endpoint yet for validating configured model IDs via `/v1/models`
-- Observability is minimal (no request timing metrics/correlation logging pipeline yet)
-- Framework structure is reusable but needs comprehensive documentation
-- Additional endpoints needed for advanced compliance features
+Remaining risks / follow-ups:
+- Property-based or fuzz testing (`proptest` / `cargo-fuzz`) not yet added
+- Firewall fuzzy matching is bounded and conservative, but may need tuning for false positive rate in real traffic
+- No startup model validation endpoint yet for `/v1/models`
+- `HttpMistralClient` response-shape hardening still partial
+- Observability is still minimal (request correlation metrics/tracing pipeline pending)
 
 ## 5) Next Concrete Code Step
 
-### Completed:
-1. Replaced `actix-web` with `axum` for web framework
-2. Replaced Redis with `sled` for embedded database storage
-3. Created reusable framework structure with proper library exports
-4. Implemented `PromptSentinelServer` builder pattern
-5. Added `FrameworkConfig` for easy initialization
-6. Fixed axum 0.7 API compatibility issues
-7. Fixed sled chronological ordering with timestamp-prefixed keys
-8. Proper dependency injection for `ComplianceEngine` via `AppState`
-
-**Framework Features:**
-- Axum 0.7-based web server with CORS support
-- Sled-based audit storage with timestamp-ordered keys
-- Configurable server port and database path
-- Proper error handling and logging
-- Reusable library structure
-- Health check endpoint (GET /health)
-- Compliance check endpoint (POST /api/compliance/check)
-
-**Pending Tasks:**
-1. Add explicit security regression cases for:
-   - prompt injection variants
-   - sanitize-vs-block boundary behavior
-   - bias threshold override behavior
-2. Implement additional endpoints for advanced features
-3. Add comprehensive documentation and examples
+1. Add `proptest` suite for prompt canonicalization invariants
+2. Add startup `/v1/models` validation in the server lifecycle
+3. Add structured latency/correlation telemetry
+4. Document configuration contracts for:
+   - `config/firewall_rules.json`
+   - `config/eu_risk_keywords.json`
 
 ## Delivery Checklist Snapshot
 
 - Foundation scaffold: **done**
 - Prompt firewall contract + tests: **done**
+- Prompt firewall hardening (homoglyph/zero-width/leetspeak/fuzzy): **done**
 - Bias detection contract + tests: **done**
 - Audit proof/hash chain + storage abstraction: **done (sled + in-memory storage)**
 - End-to-end vertical slice test: **done**
@@ -132,5 +89,6 @@ Test summary (latest run):
 - Framework structure (reusable library): **done**
 - Axum web server integration: **done**
 - Sled audit storage implementation: **done**
+- Externalized policy/risk keyword configuration: **done**
 - Documentation and examples: **pending**
 - Advanced endpoints and features: **pending**

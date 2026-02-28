@@ -1,0 +1,22 @@
+{
+  "block_rules": [
+    { "id": "PFW-001", "pattern": "ignore previous instructions" },
+    { "id": "PFW-001B", "pattern": "ignore all previous instructions" },
+    { "id": "PFW-001C", "pattern": "disregard previous instructions" },
+    { "id": "PFW-002", "pattern": "reveal system prompt" },
+    { "id": "PFW-002B", "pattern": "print system prompt" },
+    { "id": "PFW-003", "pattern": "developer instructions" },
+    { "id": "PFW-004", "pattern": "bypass policy" },
+    { "id": "PFW-005", "pattern": "jailbreak" },
+    { "id": "PFW-006", "pattern": "do anything now" }
+  ],
+  "sanitize_patterns": [
+    { "id": "PFW-SAN-001", "pattern": "```" },
+    { "id": "PFW-SAN-002", "pattern": "<script" },
+    { "id": "PFW-SAN-003", "pattern": "</script>" }
+  ],
+  "fuzzy_matching": {
+    "enabled": true,
+    "max_distance": 2
+  }
+}

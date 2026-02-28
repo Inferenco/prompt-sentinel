@@ -1,0 +1,33 @@
+{
+  "unacceptable": [
+    "social scoring",
+    "biometric surveillance",
+    "biometric categorization",
+    "emotion recognition in workplace",
+    "emotion recognition in school",
+    "manipulative subliminal"
+  ],
+  "high": [
+    "employment",
+    "hiring",
+    "education",
+    "credit",
+    "insurance",
+    "critical infrastructure",
+    "law enforcement",
+    "migration",
+    "asylum",
+    "border control",
+    "justice",
+    "judicial",
+    "essential public service",
+    "medical triage"
+  ],
+  "limited": [
+    "chatbot",
+    "recommendation",
+    "generative assistant",
+    "customer support bot",
+    "deepfake"
+  ]
+}
