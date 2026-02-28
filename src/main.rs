@@ -1,12 +1,17 @@
 use prompt_sentinel::FrameworkConfig;
-use prompt_sentinel::modules::telemetry::tracing::init_tracing;
 use prompt_sentinel::modules::telemetry::metrics::TelemetryMetrics;
+use prompt_sentinel::modules::telemetry::tracing::init_tracing;
 use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize enhanced tracing with correlation support
     init_tracing();
+    // Load environment variables from .env file
+    dotenvy::dotenv().ok();
+
+    // Initialize tracing
+    tracing_subscriber::fmt::init();
 
     info!("🚀 Starting Prompt Sentinel Framework");
 

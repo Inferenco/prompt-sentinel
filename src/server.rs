@@ -293,10 +293,14 @@ impl FrameworkConfig {
 
         let firewall_service = PromptFirewallService::new(settings.max_input_length);
         let bias_service = BiasDetectionService::new(settings.bias_threshold);
-        let mistral_client: Arc<dyn MistralClient> = Arc::new(HttpMistralClient::new(
-            settings.mistral_base_url.clone(),
-            settings.mistral_api_key.clone().unwrap_or_default(),
-        ));
+        let mistral_client: Arc<dyn MistralClient> = if settings.mistral_api_key.as_deref() == Some("mock") {
+            Arc::new(crate::modules::mistral_ai::client::MockMistralClient::default())
+        } else {
+            Arc::new(HttpMistralClient::new(
+                settings.mistral_base_url.clone(),
+                settings.mistral_api_key.clone().unwrap_or_default(),
+            ))
+        };
         let mistral_service = MistralService::new(
             mistral_client,
             settings.generation_model.clone(),

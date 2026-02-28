@@ -104,13 +104,14 @@ Test summary (latest run):
 - Added model validation at startup and runtime health checks
 - Implemented Mistral API health check endpoint
 - Fixed fuzzy matcher false negative for typo-based injection phrase variants
+- **Added comprehensive observability features with correlation IDs, metrics, and tracing** ✓ **done**
+- **Implemented Prometheus metrics exporter for monitoring** ✓ **done**
+- **Enhanced logging pipeline with correlation context** ✓ **done**
 
 ### Remaining:
 - Property-based or fuzz testing (`proptest` / `cargo-fuzz`) not yet added
 - Firewall fuzzy matching is bounded and conservative, but may need tuning for false positive rate in real traffic
-- Observability is minimal (request correlation metrics/tracing pipeline pending)
 - Framework structure is reusable but needs comprehensive documentation
-- Additional endpoints needed for advanced compliance features
 - Periodic health checks could be added for ongoing monitoring
 
 ## 5) Next Concrete Code Step
@@ -139,13 +140,13 @@ Test summary (latest run):
    - bias threshold override behavior ✓ **done**
 2. Add `proptest` suite for prompt canonicalization invariants ✓ **done**
 3. Add startup `/v1/models` validation in the server lifecycle ✓ **done**
-4. Add structured latency/correlation telemetry
+4. Add structured latency/correlation telemetry ✓ **done**
 5. Document configuration contracts for:
    - `config/firewall_rules.json` ✓ **done**
    - `config/eu_risk_keywords.json` ✓ **done**
 6. Implement additional endpoints for advanced features ✓ **done**
 7. Add comprehensive documentation and examples ✓ **done**
-8. Add observability features (metrics, tracing, correlation IDs)
+8. Add observability features (metrics, tracing, correlation IDs) ✓ **done**
 
 ## Delivery Checklist Snapshot
 
@@ -163,6 +164,7 @@ Test summary (latest run):
 - Mistral client enhancements (retry logic, error handling, logging): **done**
 - Model validation at startup and runtime: **done**
 - Mistral API health check endpoint: **done**
+- **Comprehensive observability features (correlation IDs, metrics, tracing)**: **done**
 - Documentation and examples: **done**
   - Comprehensive framework documentation (DOCUMENTATION.md)
   - Configuration guide (CONFIGURATION_GUIDE.md)
@@ -177,7 +179,7 @@ Test summary (latest run):
   - Thread-safe configuration access with proper locking
 
 ## Framework Features:
-- Axum 0.7-based web server with CORS support
+- Axum 0.8-based web server with CORS support
 - Sled-based audit storage with timestamp-ordered keys
 - Configurable server port and database path
 - Proper error handling and logging
@@ -188,6 +190,9 @@ Test summary (latest run):
 - Enhanced Mistral client with retry logic and comprehensive error handling
 - Model validation at startup and runtime
 - Detailed logging for debugging and monitoring
+- **Comprehensive observability with correlation IDs, metrics, and tracing**
+- **Prometheus metrics exporter on port 9090 for monitoring**
+- **Automatic request telemetry and performance tracking**
 - MIT License for maximum compatibility and adoption
 
 ## New Endpoints Implemented:
@@ -224,6 +229,14 @@ Test summary (latest run):
 - **Capabilities**: Runtime configuration updates, file persistence, concurrent access
 - **Safety**: Thread-safe read/write operations, error recovery, atomic updates
 - **Persistence**: Immediate disk synchronization with proper error handling
+
+### Comprehensive Observability System
+- **Correlation IDs**: Unique request tracking with UUID + atomic counter
+- **Metrics Collection**: Prometheus exporter on port 9090 with request counting, error tracking, and latency histograms
+- **Enhanced Tracing**: Structured logging with correlation context at all levels (INFO, DEBUG, WARN, ERROR, TRACE)
+- **Automatic Instrumentation**: Telemetry middleware on all HTTP endpoints
+- **Performance Monitoring**: Request latency measurement and active request gauges
+- **Production Monitoring**: Ready for deployment with comprehensive observability
 
 ### Comprehensive Testing
 - **New Tests**: 4 additional tests in `tests/new_endpoints.rs`
