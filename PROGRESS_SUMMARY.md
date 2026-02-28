@@ -34,8 +34,8 @@ This aligns with the plan goal of shipping one robust end-to-end path before exp
 - `src/modules/audit/storage.rs` (SledAuditStorage with timestamp-prefixed keys for ordering)
 - `src/modules/audit/logger.rs`
 - `src/modules/mistral_expert/dtos.rs`
-- `src/modules/mistral_expert/client.rs`
-- `src/modules/mistral_expert/service.rs`
+- `src/modules/mistral_expert/client.rs` (enhanced with retry logic, error handling, logging)
+- `src/modules/mistral_expert/service.rs` (added model validation, health checks, getters)
 - `src/modules/mistral_expert/handler.rs`
 - `src/modules/eu_law_compliance/model.rs`
 - `src/modules/eu_law_compliance/dtos.rs`
@@ -84,13 +84,15 @@ Test summary (latest run):
 - Added missing `tracing-subscriber` dependency
 - Added `server_port` field to `AppSettings`
 - Properly wired `ComplianceEngine` into axum app state
+- Enhanced Mistral client with retry logic, comprehensive error handling, and logging
+- Added model validation at startup and runtime health checks
+- Implemented Mistral API health check endpoint
 
 ### Remaining:
-- `HttpMistralClient` request/response handling is baseline-safe but not fully hardened for all API response variants
-- No startup health check endpoint yet for validating configured model IDs via `/v1/models`
 - Observability is minimal (no request timing metrics/correlation logging pipeline yet)
 - Framework structure is reusable but needs comprehensive documentation
 - Additional endpoints needed for advanced compliance features
+- Periodic health checks could be added for ongoing monitoring
 
 ## 5) Next Concrete Code Step
 
@@ -103,6 +105,9 @@ Test summary (latest run):
 6. Fixed axum 0.7 API compatibility issues
 7. Fixed sled chronological ordering with timestamp-prefixed keys
 8. Proper dependency injection for `ComplianceEngine` via `AppState`
+9. Enhanced Mistral client with comprehensive error handling and retry logic
+10. Added model validation at startup and runtime health checks
+11. Implemented Mistral API health check endpoint
 
 **Framework Features:**
 - Axum 0.7-based web server with CORS support
@@ -111,7 +116,17 @@ Test summary (latest run):
 - Proper error handling and logging
 - Reusable library structure
 - Health check endpoint (GET /health)
+- Mistral API health check endpoint (GET /api/mistral/health)
 - Compliance check endpoint (POST /api/compliance/check)
+- Enhanced Mistral client with retry logic and comprehensive error handling
+- Model validation at startup and runtime
+- Detailed logging for debugging and monitoring
+
+**Mistral Expert Enhancements:**
+- **API Response Handling**: Automatic retry mechanism (3 attempts), timeout handling (30s), comprehensive error variants
+- **Model Validation**: Individual and comprehensive model validation, startup validation, runtime health checks
+- **Reliability**: Robust error recovery, proper timeout management, detailed logging throughout
+- **Health Monitoring**: Dedicated health check endpoint with model status reporting
 
 **Pending Tasks:**
 1. Add explicit security regression cases for:
@@ -120,6 +135,7 @@ Test summary (latest run):
    - bias threshold override behavior
 2. Implement additional endpoints for advanced features
 3. Add comprehensive documentation and examples
+4. Add observability features (metrics, tracing, correlation IDs)
 
 ## Delivery Checklist Snapshot
 
@@ -132,5 +148,8 @@ Test summary (latest run):
 - Framework structure (reusable library): **done**
 - Axum web server integration: **done**
 - Sled audit storage implementation: **done**
+- Mistral client enhancements (retry logic, error handling, logging): **done**
+- Model validation at startup and runtime: **done**
+- Mistral API health check endpoint: **done**
 - Documentation and examples: **pending**
 - Advanced endpoints and features: **pending**

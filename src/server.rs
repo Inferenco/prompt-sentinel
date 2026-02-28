@@ -6,9 +6,10 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use serde_json;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
-use tracing::info;
+use tracing::{debug, error, info};
 
 use crate::config::settings::AppSettings;
 use crate::modules::audit::logger::AuditLogger;
@@ -46,6 +47,7 @@ impl PromptSentinelServer {
         Router::new()
             .route("/api/compliance/check", post(check_compliance))
             .route("/health", get(health_check))
+            .route("/api/mistral/health", get(mistral_health_check))
             .layer(
                 CorsLayer::new()
                     .allow_origin(Any)
@@ -71,6 +73,33 @@ impl PromptSentinelServer {
 
 async fn health_check() -> &'static str {
     "OK"
+}
+
+async fn mistral_health_check(
+    State(state): State<AppState>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    debug!("Received Mistral health check request");
+    
+    let mistral_service = state.engine.mistral_service();
+    
+    match mistral_service.health_check().await {
+        Ok(_) => {
+            info!("Mistral health check passed");
+            Ok(Json(serde_json::json!({
+                "status": "healthy",
+                "message": "Mistral API integration is operational",
+                "models": [
+                    mistral_service.generation_model(),
+                    mistral_service.moderation_model(),
+                    mistral_service.embedding_model()
+                ]
+            })))
+        }
+        Err(e) => {
+            error!("Mistral health check failed: {}", e);
+            Err((StatusCode::SERVICE_UNAVAILABLE, format!("Mistral API unhealthy: {}", e)))
+        }
+    }
 }
 
 async fn check_compliance(
@@ -131,6 +160,16 @@ impl FrameworkConfig {
             settings.moderation_model.clone(),
             settings.embedding_model.clone(),
         );
+
+        // Perform model validation at startup
+        info!("Validating Mistral models at startup...");
+        tokio::runtime::Runtime::new()?.block_on(async {
+            mistral_service.validate_all_models().await.map_err(|e| {
+                error!("Model validation failed: {}", e);
+                Box::new(e) as Box<dyn std::error::Error>
+            })
+        })?;
+        info!("All Mistral models validated successfully");
 
         let engine = ComplianceEngine::new(
             firewall_service,

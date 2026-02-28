@@ -1,9 +1,11 @@
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use async_trait::async_trait;
-use reqwest::Client;
+use reqwest::{Client, Error as ReqwestError, StatusCode};
 use serde_json::Value;
 use thiserror::Error;
+use tracing::{debug, error, info, warn};
 
 use super::dtos::{
     ChatCompletionRequest, ChatCompletionResponse, EmbeddingRequest, EmbeddingResponse,
@@ -32,19 +34,77 @@ pub struct HttpMistralClient {
     http: Client,
     base_url: String,
     api_key: String,
+    max_retries: u32,
+    retry_delay: Duration,
 }
 
 impl HttpMistralClient {
     pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Self {
         Self {
-            http: Client::new(),
+            http: Client::builder()
+                .timeout(Duration::from_secs(30))
+                .build()
+                .unwrap(),
             base_url: base_url.into(),
             api_key: api_key.into(),
+            max_retries: 3,
+            retry_delay: Duration::from_millis(500),
         }
     }
 
     fn url(&self, path: &str) -> String {
         format!("{}{}", self.base_url.trim_end_matches('/'), path)
+    }
+
+    async fn send_request_with_retry<T: serde::de::DeserializeOwned>(
+        &self,
+        request_builder: reqwest::RequestBuilder,
+    ) -> Result<T, MistralClientError> {
+        let mut last_error = None;
+
+        for attempt in 0..=self.max_retries {
+            match request_builder.try_clone() {
+                Some(cloned_builder) => {
+                    debug!("Attempt {} for Mistral API request", attempt + 1);
+                    
+                    match cloned_builder.send().await {
+                        Ok(response) => {
+                            if response.status().is_success() {
+                                let json = response.json::<T>().await?;
+                                debug!("Mistral API request successful");
+                                return Ok(json);
+                            } else {
+                                let status = response.status();
+                                let error_body = response.text().await.unwrap_or_default();
+                                error!("Mistral API error {}: {}", status, error_body);
+                                last_error = Some(MistralClientError::ApiError {
+                                    status: status.as_u16(),
+                                    message: error_body,
+                                });
+                            }
+                        }
+                        Err(e) => {
+                            error!("Mistral API request failed: {}", e);
+                            last_error = Some(MistralClientError::Request(e));
+                        }
+                    }
+                }
+                None => {
+                    return Err(MistralClientError::InvalidResponse(
+                        "Failed to clone request builder".to_owned()
+                    ));
+                }
+            }
+
+            if attempt < self.max_retries {
+                warn!("Retrying in {:?}...", self.retry_delay);
+                tokio::time::sleep(self.retry_delay).await;
+            }
+        }
+
+        Err(last_error.unwrap_or_else(|| MistralClientError::InvalidResponse(
+            "All retry attempts failed".to_owned()
+        )))
     }
 }
 
@@ -54,16 +114,15 @@ impl MistralClient for HttpMistralClient {
         &self,
         request: ChatCompletionRequest,
     ) -> Result<ChatCompletionResponse, MistralClientError> {
-        let response = self
+        info!("Sending chat completion request to model: {}", request.model);
+        
+        let request_builder = self
             .http
             .post(self.url("/v1/chat/completions"))
             .bearer_auth(&self.api_key)
-            .json(&request)
-            .send()
-            .await?
-            .error_for_status()?;
+            .json(&request);
 
-        let json: Value = response.json().await?;
+        let json: Value = self.send_request_with_retry(request_builder).await?;
         let output_text = extract_content(&json)?;
         let model = json
             .get("model")
@@ -71,6 +130,7 @@ impl MistralClient for HttpMistralClient {
             .unwrap_or(request.model.as_str())
             .to_owned();
 
+        debug!("Chat completion successful for model: {}", model);
         Ok(ChatCompletionResponse { model, output_text })
     }
 
@@ -78,16 +138,15 @@ impl MistralClient for HttpMistralClient {
         &self,
         request: ModerationRequest,
     ) -> Result<ModerationResponse, MistralClientError> {
-        let response = self
+        info!("Sending moderation request");
+        
+        let request_builder = self
             .http
             .post(self.url("/v1/moderations"))
             .bearer_auth(&self.api_key)
-            .json(&request)
-            .send()
-            .await?
-            .error_for_status()?;
+            .json(&request);
 
-        let json: Value = response.json().await?;
+        let json: Value = self.send_request_with_retry(request_builder).await?;
         let result = json
             .get("results")
             .and_then(Value::as_array)
@@ -116,6 +175,7 @@ impl MistralClient for HttpMistralClient {
             0.0
         };
 
+        debug!("Moderation completed: flagged={}, severity={}", flagged, severity);
         Ok(ModerationResponse {
             flagged,
             categories,
@@ -127,16 +187,15 @@ impl MistralClient for HttpMistralClient {
         &self,
         request: EmbeddingRequest,
     ) -> Result<EmbeddingResponse, MistralClientError> {
-        let response = self
+        info!("Sending embedding request for model: {}", request.model);
+        
+        let request_builder = self
             .http
             .post(self.url("/v1/embeddings"))
             .bearer_auth(&self.api_key)
-            .json(&request)
-            .send()
-            .await?
-            .error_for_status()?;
+            .json(&request);
 
-        let json: Value = response.json().await?;
+        let json: Value = self.send_request_with_retry(request_builder).await?;
         let vector_values = json
             .get("data")
             .and_then(Value::as_array)
@@ -152,6 +211,7 @@ impl MistralClient for HttpMistralClient {
             .map(|value| value.as_f64().unwrap_or_default() as f32)
             .collect::<Vec<_>>();
 
+        debug!("Embedding successful: vector length = {}", vector.len());
         Ok(EmbeddingResponse {
             model: request.model,
             vector,
@@ -159,15 +219,14 @@ impl MistralClient for HttpMistralClient {
     }
 
     async fn list_models(&self) -> Result<ModelListResponse, MistralClientError> {
-        let response = self
+        info!("Fetching available models from Mistral API");
+        
+        let request_builder = self
             .http
             .get(self.url("/v1/models"))
-            .bearer_auth(&self.api_key)
-            .send()
-            .await?
-            .error_for_status()?;
+            .bearer_auth(&self.api_key);
 
-        let json: Value = response.json().await?;
+        let json: Value = self.send_request_with_retry(request_builder).await?;
         let models = json
             .get("data")
             .and_then(Value::as_array)
@@ -177,6 +236,7 @@ impl MistralClient for HttpMistralClient {
             .map(ToOwned::to_owned)
             .collect::<Vec<_>>();
 
+        debug!("Available models: {:?}", models);
         Ok(ModelListResponse { models })
     }
 }
@@ -313,6 +373,8 @@ fn extract_content(response: &Value) -> Result<String, MistralClientError> {
 pub enum MistralClientError {
     #[error("mistral request failed: {0}")]
     Request(#[from] reqwest::Error),
+    #[error("mistral API error: HTTP {status} - {message}")]
+    ApiError { status: u16, message: String },
     #[error("mistral response contract invalid: {0}")]
     InvalidResponse(String),
 }

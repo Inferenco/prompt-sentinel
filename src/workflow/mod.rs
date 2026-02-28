@@ -62,6 +62,11 @@ impl ComplianceEngine {
         }
     }
 
+    /// Get a reference to the Mistral service for health checks
+    pub fn mistral_service(&self) -> &MistralService {
+        &self.mistral_service
+    }
+
     pub async fn process(
         &self,
         request: ComplianceRequest,
