@@ -34,7 +34,7 @@ proptest! {
         let canonical = test_canonicalize_for_block_match(&with_leetspeak);
         let expected = test_canonicalize_for_block_match(&input);
         prop_assert_eq!(canonical, expected);
-}
+    }
 
     #[test]
     fn strip_case_insensitive_removes_pattern(pattern: String, input: String) {
