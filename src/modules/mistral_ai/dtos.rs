@@ -36,9 +36,18 @@ pub struct TranslationResponse {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub struct TokenUsage {
+    pub prompt_tokens: u32,
+    pub completion_tokens: u32,
+    pub total_tokens: u32,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct ChatCompletionResponse {
     pub model: String,
     pub output_text: String,
+    /// Token usage statistics from the API (if available)
+    pub usage: Option<TokenUsage>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

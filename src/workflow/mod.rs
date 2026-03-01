@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::time::Instant;
 use thiserror::Error;
 
 use crate::modules::audit::logger::{AuditError, AuditEvent, AuditLogger};
@@ -246,6 +247,20 @@ impl ComplianceEngine {
                 final_reason: evidence.final_reason.clone(),
                 model_used: None,
                 output_preview: None,
+                full_output_text: None,
+                output_moderation_categories: vec![],
+                eu_risk_tier: Some(format!("{:?}", eu_compliance.risk_tier)),
+                eu_findings: Some(
+                    eu_compliance
+                        .findings
+                        .iter()
+                        .map(|f| f.detail.clone())
+                        .collect(),
+                ),
+                tokens_used: None,
+                response_latency_ms: None,
+                detected_language: Some(original_language.clone()),
+                was_translated: false,
             })?;
 
             return Ok(ComplianceResponse {
@@ -303,6 +318,20 @@ impl ComplianceEngine {
                 final_reason: evidence.final_reason.clone(),
                 model_used: None,
                 output_preview: None,
+                full_output_text: None,
+                output_moderation_categories: vec![],
+                eu_risk_tier: Some(format!("{:?}", eu_compliance.risk_tier)),
+                eu_findings: Some(
+                    eu_compliance
+                        .findings
+                        .iter()
+                        .map(|f| f.detail.clone())
+                        .collect(),
+                ),
+                tokens_used: None,
+                response_latency_ms: None,
+                detected_language: Some(original_language.clone()),
+                was_translated: false,
             })?;
 
             return Ok(ComplianceResponse {
@@ -380,6 +409,20 @@ impl ComplianceEngine {
                 final_reason: evidence.final_reason.clone(),
                 model_used: None,
                 output_preview: None,
+                full_output_text: None,
+                output_moderation_categories: vec![],
+                eu_risk_tier: Some(format!("{:?}", eu_compliance.risk_tier)),
+                eu_findings: Some(
+                    eu_compliance
+                        .findings
+                        .iter()
+                        .map(|f| f.detail.clone())
+                        .collect(),
+                ),
+                tokens_used: None,
+                response_latency_ms: None,
+                detected_language: Some(original_language.clone()),
+                was_translated: false,
             })?;
 
             return Ok(ComplianceResponse {
@@ -441,6 +484,20 @@ impl ComplianceEngine {
                 final_reason: evidence.final_reason.clone(),
                 model_used: None,
                 output_preview: None,
+                full_output_text: None,
+                output_moderation_categories: input_moderation.categories.clone(),
+                eu_risk_tier: Some(format!("{:?}", eu_compliance.risk_tier)),
+                eu_findings: Some(
+                    eu_compliance
+                        .findings
+                        .iter()
+                        .map(|f| f.detail.clone())
+                        .collect(),
+                ),
+                tokens_used: None,
+                response_latency_ms: None,
+                detected_language: Some(original_language.clone()),
+                was_translated: false,
             })?;
 
             return Ok(ComplianceResponse {
@@ -465,22 +522,26 @@ impl ComplianceEngine {
                 .map(|s| s.risk_level == SemanticRiskLevel::Medium)
                 .unwrap_or(false);
 
-        // Generate text
+        // Generate text with timing
         log_with_correlation(
             &correlation_id,
             tracing::Level::INFO,
             "Generating text with Mistral AI",
         );
+        let generation_start = Instant::now();
         let generation = self
             .mistral_service
             .generate_text(firewall.sanitized_prompt.clone(), true)
             .await?;
+        let generation_latency_ms = generation_start.elapsed().as_millis() as u64;
 
         // Clone the English output for moderation and audit logging
         let english_output = generation.output_text.clone();
-        
+        let tokens_used = generation.usage.as_ref().map(|u| u.total_tokens);
+
         // Translate generated text back to original language if needed
-        let generated_text = if original_language.to_lowercase() != "english" {
+        let was_translated = original_language.to_lowercase() != "english";
+        let generated_text = if was_translated {
             self.translate_to_original_language(&english_output, &original_language).await
         } else {
             english_output.clone()
@@ -540,6 +601,20 @@ impl ComplianceEngine {
                 final_reason: evidence.final_reason.clone(),
                 model_used: Some(generation.model),
                 output_preview: Some(english_output.chars().take(160).collect()),
+                full_output_text: Some(english_output.clone()),
+                output_moderation_categories: output_moderation.categories.clone(),
+                eu_risk_tier: Some(format!("{:?}", eu_compliance.risk_tier)),
+                eu_findings: Some(
+                    eu_compliance
+                        .findings
+                        .iter()
+                        .map(|f| f.detail.clone())
+                        .collect(),
+                ),
+                tokens_used,
+                response_latency_ms: Some(generation_latency_ms),
+                detected_language: Some(original_language.clone()),
+                was_translated,
             })?;
 
             return Ok(ComplianceResponse {
@@ -620,6 +695,20 @@ impl ComplianceEngine {
             final_reason: evidence.final_reason.clone(),
             model_used: Some(generation.model.clone()),
             output_preview: Some(english_output.chars().take(160).collect()),
+            full_output_text: Some(english_output),
+            output_moderation_categories: vec![],
+            eu_risk_tier: Some(format!("{:?}", eu_compliance.risk_tier)),
+            eu_findings: Some(
+                eu_compliance
+                    .findings
+                    .iter()
+                    .map(|f| f.detail.clone())
+                    .collect(),
+            ),
+            tokens_used,
+            response_latency_ms: Some(generation_latency_ms),
+            detected_language: Some(original_language),
+            was_translated,
         })?;
 
         log_with_correlation(
