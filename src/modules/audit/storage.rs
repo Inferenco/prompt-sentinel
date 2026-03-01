@@ -92,7 +92,7 @@ impl AuditStorage for InMemoryAuditStorage {
         correlation_id: Option<String>,
     ) -> Result<AuditTrailResponse, AuditStorageError> {
         let all_records = self.all()?;
-        
+
         // Apply time filters
         let filtered_records: Vec<StoredAuditRecord> = all_records
             .into_iter()
@@ -105,16 +105,16 @@ impl AuditStorage for InMemoryAuditStorage {
                         .as_ref()
                         .map(|end| record.timestamp <= *end)
                         .unwrap_or(true);
-                
+
                 let matches_correlation = correlation_id
                     .as_ref()
                     .map(|cid| record.correlation_id == *cid)
                     .unwrap_or(true);
-                
+
                 in_time_range && matches_correlation
             })
             .collect();
-        
+
         // Apply pagination
         let limit = limit.unwrap_or(100);
         let offset = offset.unwrap_or(0);
@@ -124,7 +124,7 @@ impl AuditStorage for InMemoryAuditStorage {
             .skip(offset)
             .take(limit)
             .collect();
-        
+
         Ok(AuditTrailResponse {
             records: paginated_records,
             total_count,
@@ -221,7 +221,7 @@ impl AuditStorage for SledAuditStorage {
         correlation_id: Option<String>,
     ) -> Result<AuditTrailResponse, AuditStorageError> {
         let all_records = self.all()?;
-        
+
         // Apply time filters
         let filtered_records: Vec<StoredAuditRecord> = all_records
             .into_iter()
@@ -234,16 +234,16 @@ impl AuditStorage for SledAuditStorage {
                         .as_ref()
                         .map(|end| record.timestamp <= *end)
                         .unwrap_or(true);
-                
+
                 let matches_correlation = correlation_id
                     .as_ref()
                     .map(|cid| record.correlation_id == *cid)
                     .unwrap_or(true);
-                
+
                 in_time_range && matches_correlation
             })
             .collect();
-        
+
         // Apply pagination
         let limit = limit.unwrap_or(100);
         let offset = offset.unwrap_or(0);
@@ -253,7 +253,7 @@ impl AuditStorage for SledAuditStorage {
             .skip(offset)
             .take(limit)
             .collect();
-        
+
         Ok(AuditTrailResponse {
             records: paginated_records,
             total_count,

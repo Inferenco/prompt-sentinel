@@ -1,6 +1,6 @@
-use tracing::{info, debug, error, warn, span, Level};
-use tracing_subscriber::{fmt, EnvFilter};
 use std::sync::Once;
+use tracing::{Level, debug, error, info, span, warn};
+use tracing_subscriber::{EnvFilter, fmt};
 
 static INIT: Once = Once::new();
 
