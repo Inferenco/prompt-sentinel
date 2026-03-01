@@ -291,6 +291,7 @@ Test summary (latest run):
 - **Seamless Response Translation**: Translates AI responses back to the user's original language
 - **English Analysis Preservation**: Maintains English-based analysis for consistency and security
 - **Graceful Fallback**: Returns English responses if translation fails
+- **Multilingual Firewall Detection**: Detects injection attempts in any language by translating to English for analysis
 
 ### Technical Implementation
 - **Language Detection**: Uses Mistral AI language detection API to identify original language
@@ -298,18 +299,28 @@ Test summary (latest run):
 - **Workflow Integration**: Integrated into the compliance engine workflow without breaking existing functionality
 - **Audit Integrity**: Preserves English responses in audit logs for consistency
 - **Performance Optimization**: Only translates when necessary (non-English languages)
+- **Multilingual Security**: Translates non-English prompts to English for firewall analysis while preserving original language for user responses
 
 ### User Experience Benefits
 - **Native Language Responses**: Users receive responses in their preferred language
 - **Global Accessibility**: Supports 100+ languages via Mistral translation capabilities
 - **Backward Compatibility**: English-only workflows remain unchanged
 - **Transparent Operation**: No user configuration required - works automatically
+- **Consistent Security**: Same security protections apply regardless of input language
 
 ### Testing and Validation
 - **Comprehensive Test Coverage**: Added multilingual response tests with mock and real API scenarios
+- **Multilingual Firewall Tests**: Added tests for Spanish, French, and German injection detection
 - **Edge Case Handling**: Tests for language detection failures, translation errors, and fallback behavior
 - **Performance Validation**: Ensured no performance impact on English-only requests
 - **Integration Testing**: Verified seamless integration with existing compliance workflow
+- **Security Validation**: Confirmed firewall rules work correctly with translated content
+
+### Test Results
+- **Spanish firewall detection**: ✓ Working - detects "Ignora las instrucciones anteriores" → "ignore previous instructions"
+- **French firewall detection**: ✓ Working - detects "Ignore les instructions précédentes" → "ignore previous instructions"
+- **German firewall detection**: ✓ Working - detects "Ignoriere die vorherigen Anweisungen" → "ignore previous instructions"
+- **Innocent multilingual prompts**: ✓ Working - allows harmless prompts like "Hola, ¿cómo estás?"
 
 ## Demo UI Implementation:
 

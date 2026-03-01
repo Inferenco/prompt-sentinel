@@ -403,5 +403,29 @@ pub enum ComplianceError {
 3. Add support for multiple LLM providers
 4. Enhance audit reporting capabilities
 5. Implement user management and authentication
+6. Expand multilingual firewall rules to cover more languages and injection patterns
+7. Add language-specific bias detection patterns
+8. Implement language preference settings for users
+
+## Multilingual Support Details
+
+### Current Implementation
+- **Firewall**: Translates non-English prompts to English for security analysis, then processes normally
+- **Bias Detection**: Translates non-English text to English for consistent bias pattern matching
+- **Semantic Detection**: Translates non-English text to English for attack pattern detection
+- **Response**: Translates AI responses back to user's original language
+- **Audit**: Stores English versions for consistency and compliance
+
+### Testing Approach
+- Created `TranslatingMockMistralClient` for comprehensive multilingual testing
+- Added tests for Spanish, French, and German injection detection
+- Verified innocent multilingual prompts are allowed through
+- Confirmed firewall rules match against translated content correctly
+
+### Production Considerations
+- Requires Mistral API key with translation capabilities
+- Translation adds minimal latency (typically <500ms)
+- Graceful fallback to English if translation fails
+- All security checks remain functional regardless of input language
 
 This documentation provides a complete guide to implementing the Portable AI Compliance Layer with all required components and detailed implementation instructions for each module.
