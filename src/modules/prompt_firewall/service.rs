@@ -1,6 +1,7 @@
 use super::dtos::{PromptFirewallRequest, PromptFirewallResult};
 use super::rules;
 use std::sync::Arc;
+use tracing::debug;
 
 #[derive(Clone)]
 pub struct PromptFirewallService {
@@ -33,6 +34,7 @@ impl PromptFirewallService {
 
     async fn translate_if_needed(&self, text: &str) -> String {
         let Some(mistral_service) = &self.mistral_service else {
+            debug!("No Mistral service available, skipping translation");
             return text.to_owned();
         };
 
@@ -43,11 +45,15 @@ impl PromptFirewallService {
             })
             .await
         else {
+            debug!("Language detection failed, using original text");
             return text.to_owned();
         };
 
+        debug!("Detected language: {}", lang_detection.language);
+
         // Skip translation if already English (to avoid paraphrasing)
         if lang_detection.language.to_lowercase() == "english" {
+            debug!("Text is already English, no translation needed");
             return text.to_owned();
         }
 
@@ -59,9 +65,11 @@ impl PromptFirewallService {
             })
             .await
         else {
+            debug!("Translation failed, using original text");
             return text.to_owned();
         };
 
+        debug!("Translated '{}' to '{}'", text, translation.translated_text);
         translation.translated_text
     }
 }

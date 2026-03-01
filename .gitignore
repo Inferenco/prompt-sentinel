@@ -19,3 +19,7 @@ dist-ssr/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Test data files
+test_english_data
+test_multilingual_data
