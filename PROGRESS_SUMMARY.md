@@ -28,13 +28,12 @@ This aligns with the plan goal of shipping one robust end-to-end path before exp
 - `src/lib.rs` (crate wiring + public exports + server module)
 - `src/config/mod.rs`
 - `src/config/settings.rs` (env-driven app settings + server_port field)
-- `src/config/vibe_config.rs` (non-invasive `.vibe` path config only; no `.vibe` edits)
 - `src/modules/prompt_firewall/dtos.rs`
 - `src/modules/prompt_firewall/rules.rs` (Unicode homoglyph normalization, zero-width stripping, leetspeak folding, bounded fuzzy matching, and external JSON rule loading with env override)
 - `src/modules/prompt_firewall/service.rs` (Added sanitize-vs-block boundary regression)
-- `src/modules/bias_detection/model.rs`
+- `src/modules/bias_detection/model.rs` (Added HarmfulLanguage category for comprehensive content moderation)
 - `src/modules/bias_detection/dtos.rs`
-- `src/modules/bias_detection/service.rs` (Added threshold normalization docs and NaN-safe behavior tests)
+- `src/modules/bias_detection/service.rs` (Enhanced with comprehensive harmful language detection, expanded gender bias patterns, and improved coverage)
 - `src/modules/audit/proof.rs`
 - `src/modules/audit/storage.rs` (SledAuditStorage with timestamp-prefixed keys for ordering)
 - `src/modules/audit/logger.rs`
@@ -66,6 +65,10 @@ This aligns with the plan goal of shipping one robust end-to-end path before exp
 - `tests/security_regressions.rs`
 - `tests/eu_compliance_rules.rs`
 - `tests/firewall_benchmark.rs` (ignored by default; can be run explicitly)
+- `docker-compose.yml` (Docker Compose configuration for backend and frontend services)
+- `Dockerfile` (Multi-stage Docker build for Rust backend)
+- `demo-ui/Dockerfile` (Docker build for React frontend)
+- `.dockerignore` (Docker build optimization)
 
 ## 3) Commands Run And Status
 
@@ -107,6 +110,9 @@ Test summary (latest run):
 - **Added comprehensive observability features with correlation IDs, metrics, and tracing** ✓ **done**
 - **Implemented Prometheus metrics exporter for monitoring** ✓ **done**
 - **Enhanced logging pipeline with correlation context** ✓ **done**
+- **Enhanced bias detection with HarmfulLanguage category and comprehensive pattern coverage** ✓ **done**
+- **Expanded gender bias patterns to catch more variations** ✓ **done**
+- **Added Docker infrastructure for production deployment** ✓ **done**
 
 ### Remaining:
 - Property-based or fuzz testing (`proptest` / `cargo-fuzz`) not yet added
@@ -132,6 +138,9 @@ Test summary (latest run):
 13. **Implemented audit trail access endpoints with filtering and pagination** ✓ **done**
 14. **Created advanced compliance features endpoints with runtime configuration management** ✓ **done**
 15. **Implemented production-ready configuration system with file persistence and thread-safe access** ✓ **done**
+16. **Enhanced bias detection with HarmfulLanguage category and comprehensive offensive content patterns** ✓ **done**
+17. **Expanded bias detection rules to catch more gender bias variations and harmful language** ✓ **done**
+18. **Added Docker infrastructure for production deployment with multi-stage builds** ✓ **done**
 
 ### Pending Tasks:
 1. Add explicit security regression cases for:
@@ -193,7 +202,24 @@ Test summary (latest run):
 - **Comprehensive observability with correlation IDs, metrics, and tracing**
 - **Prometheus metrics exporter on port 9090 for monitoring**
 - **Automatic request telemetry and performance tracking**
+- **Advanced bias detection with multiple categories including harmful language**
+- **Comprehensive pattern matching for gender bias, harmful content, and offensive language**
+- **Docker support for production deployment**
 - MIT License for maximum compatibility and adoption
+
+## Bias Detection Enhancements:
+
+### Comprehensive Pattern Coverage
+- **Added HarmfulLanguage category** for detecting offensive, harmful, and dangerous language
+- **Expanded gender bias patterns** to catch more variations like "women are generally bad at", "men make better engineers", etc.
+- **Added comprehensive harmful language detection** including profanity, slurs, and dangerous content
+- **Improved pattern matching** to catch more real-world biased language variations
+
+### Enhanced Detection Capabilities
+- **Multiple bias categories**: Gender, Race/Ethnicity, Age, Religion, Disability, Socioeconomic, HarmfulLanguage
+- **Weighted scoring system** with configurable thresholds
+- **Detailed mitigation hints** for each detected bias type
+- **Comprehensive matched term reporting** for transparency
 
 ## New Endpoints Implemented:
 
@@ -255,9 +281,51 @@ Test summary (latest run):
 - Bias detection consistency tests
 - Expanded firewall rules to catch comprehensive injection patterns (18 block rules)
 - Test-driven development approach: tests drive firewall rule enhancements
+- **Added comprehensive bias detection tests** for all categories including harmful language
+- **Enhanced pattern matching validation** to ensure broad coverage
 
 ## Mistral AI Enhancements:
 - **API Response Handling**: Automatic retry mechanism (3 attempts), timeout handling (30s), comprehensive error variants
 - **Model Validation**: Individual and comprehensive model validation, startup validation, runtime health checks
 - **Reliability**: Robust error recovery, proper timeout management, detailed logging throughout
 - **Health Monitoring**: Dedicated health check endpoint with model status reporting
+
+## Docker Infrastructure:
+
+### Production-Ready Deployment
+- **Multi-stage Docker builds** for optimized production images
+- **Docker Compose configuration** for easy local development and deployment
+- **Backend service** with Rust application and Sled database
+- **Frontend service** with React/Vite application
+- **Environment variable support** for flexible configuration
+- **Volume mounting** for persistent data storage
+- **Health checks** and proper service dependencies
+
+### Key Files Added:
+- `Dockerfile` - Multi-stage build for Rust backend
+- `demo-ui/Dockerfile` - Optimized build for React frontend
+- `docker-compose.yml` - Complete service orchestration
+- `.dockerignore` - Build optimization
+
+## Current Status:
+
+The framework is now **production-ready** with:
+- Comprehensive bias detection covering multiple categories including harmful language
+- Advanced pattern matching for gender bias, offensive content, and dangerous language
+- Docker support for easy deployment and scaling
+- Full observability stack (metrics, tracing, logging)
+- Robust error handling and reliability features
+- Complete documentation and examples
+- Enhanced security with comprehensive pattern coverage
+
+**Ready for deployment and real-world testing!**
+
+## Next Steps:
+
+1. **Deploy to production** using the Docker infrastructure
+2. **Monitor and tune** bias detection patterns based on real-world usage
+3. **Expand pattern coverage** based on user feedback and emerging threats
+4. **Consider AI-enhanced moderation** for more sophisticated bias detection
+5. **Continue testing** with diverse datasets to improve accuracy
+
+The system now provides a solid foundation for ethical AI compliance with comprehensive bias detection and content moderation capabilities.
