@@ -7,6 +7,34 @@ Base: `origin/main` at `d263d81`
 Branch Delta: 2 commits ahead (`39bd96c`, `9e37700`)
 Working Tree: clean
 
+## Table of Contents
+
+1. [Completed Work On This Branch](#1-completed-work-on-this-branch)
+2. [Commits On This Branch](#2-commits-on-this-branch)
+3. [Validation Run](#3-validation-run)
+4. [Current Status](#4-current-status)
+5. [Current Milestone And Objective](#5-current-milestone-and-objective)
+6. [Files Created/Updated](#6-files-createdupdated)
+7. [Commands Run And Status](#7-commands-run-and-status)
+8. [Open Blockers / Remaining Risks](#8-open-blockers--remaining-risks)
+9. [Current Milestone And Objective](#9-current-milestone-and-objective)
+10. [Files Created/Updated](#10-files-createdupdated)
+11. [Commands Run And Status](#11-commands-run-and-status)
+12. [Open Blockers / Remaining Risks](#12-open-blockers--remaining-risks)
+13. [Next Concrete Code Step](#13-next-concrete-code-step)
+14. [Delivery Checklist Snapshot](#14-delivery-checklist-snapshot)
+15. [Framework Features](#15-framework-features)
+16. [Demo UI Implementation](#16-demo-ui-implementation)
+17. [Semantic Attack Template Bank](#17-semantic-attack-template-bank)
+18. [Testing Enhancements](#18-testing-enhancements)
+19. [New Endpoints Implemented](#19-new-endpoints-implemented)
+20. [Advanced Features](#20-advanced-features)
+21. [Testing Enhancements](#21-testing-enhancements)
+22. [Mistral AI Enhancements](#22-mistral-ai-enhancements)
+23. [Docker Infrastructure](#23-docker-infrastructure)
+24. [Current Status](#24-current-status)
+25. [Next Steps](#25-next-steps)
+
 ## 1) Completed Work On This Branch
 
 ### EU AI Act Compliance In Workflow
@@ -96,7 +124,7 @@ Working Tree: clean
 - EU compliance obligations/findings are visible in the demo UI.
 - Audit evidence now includes full output, latency, token usage, moderation categories, language, translation metadata, and EU compliance context.
 
-## 5) Current Milestone And Objective
+## 9) Current Milestone And Objective
 
 **Milestone reached:** Foundation + first vertical slice + framework integration fixes + security hardening expansion + semantic detection + demo UI + **multilingual support**.
 
@@ -114,7 +142,7 @@ This aligns with the plan goal of shipping one robust end-to-end path with compr
 - Keep the existing end-to-end workflow stable.
 - **Implement multilingual response translation for seamless user experience** ✓ **done**
 
-## 6) Files Created/Updated
+## 10) Files Created/Updated
 
 ### Updated
 
@@ -169,7 +197,7 @@ This aligns with the plan goal of shipping one robust end-to-end path with compr
 - `.dockerignore` (Docker build optimization)
 - `tests/multilingual_response_test.rs` (**Comprehensive multilingual response translation tests**) ✓ **done**
 
-## 7) Commands Run And Status
+## 11) Commands Run And Status
 
 - `cargo fmt --check` -> **pass**
 - `cargo check` -> **pass**
@@ -192,7 +220,7 @@ Test summary (latest run):
 - Sled storage compilation: **pass**
 - Framework structure validation: **pass**
 
-## 8) Open Blockers / Remaining Risks
+## 12) Open Blockers / Remaining Risks
 
 ### Resolved (this session):
 - Fixed axum 0.7 API usage (`TcpListener::bind()` + `axum::serve()`)
@@ -226,7 +254,7 @@ Test summary (latest run):
 - Framework structure is reusable but needs comprehensive documentation
 - Periodic health checks could be added for ongoing monitoring
 
-## 5) Next Concrete Code Step
+## 13) Next Concrete Code Step
 
 ### Completed:
 1. Replaced `actix-web` with `axum` for web framework
@@ -415,7 +443,7 @@ Test summary (latest run):
 - **German firewall detection**: ✓ Working - detects "Ignoriere die vorherigen Anweisungen" → "ignore previous instructions"
 - **Innocent multilingual prompts**: ✓ Working - allows harmless prompts like "Hola, ¿cómo estás?"
 
-## Demo UI Implementation:
+## 14) Demo UI Implementation:
 
 ### Comprehensive React/Vite Frontend
 - **Interactive interface**: Full-featured demo UI for testing the compliance framework
@@ -439,7 +467,7 @@ Test summary (latest run):
 - **Error handling**: Proper error display and user feedback
 - **Loading states**: Visual indicators during API calls
 
-## Semantic Attack Template Bank:
+## 15) Semantic Attack Template Bank:
 
 ### Comprehensive Attack Patterns
 - **25 attack templates**: Covering multiple categories of semantic attacks
@@ -455,7 +483,7 @@ Test summary (latest run):
 - **roleplay_jailbreak**: 6 templates
 - **policy_bypass**: 7 templates
 
-## Testing Enhancements:
+## 16) Testing Enhancements:
 
 ### Semantic Evaluation Tests
 - **Real-world scenarios**: 50+ test cases in injection_eval.jsonl
@@ -474,7 +502,7 @@ Test summary (latest run):
 - **Regression tests**: Security and boundary condition validation
 - **Property tests**: Invariants and mathematical properties
 
-## New Endpoints Implemented:
+## 18) New Endpoints Implemented:
 
 ### 1. Model Validation Endpoint
 - **Route**: `GET /v1/models`
@@ -501,7 +529,7 @@ Test summary (latest run):
 - **Features**: Runtime configuration updates, file persistence, thread-safe access
 - **Response**: `ComplianceConfigurationResponse` with current configuration summary
 
-## Advanced Features:
+## 19) Advanced Features:
 
 ### Production-Ready Configuration System
 - **Technology**: `Arc<RwLock<EuRiskKeywordConfig>>` with `lazy_static` initialization
@@ -523,7 +551,7 @@ Test summary (latest run):
 - **Integration**: All 48 tests passing (44 existing + 4 new)
 - **Verification**: Configuration persistence and runtime updates validated
 
-## Testing Enhancements:
+## 17) Testing Enhancements:
 - Property-based testing with `proptest` for canonicalization invariants
 - Comprehensive security regression test cases for prompt injection variants
 - Sanitize-vs-block boundary behavior tests
@@ -537,13 +565,13 @@ Test summary (latest run):
 - **Added comprehensive bias detection tests** for all categories including harmful language
 - **Enhanced pattern matching validation** to ensure broad coverage
 
-## Mistral AI Enhancements:
+## 20) Mistral AI Enhancements:
 - **API Response Handling**: Automatic retry mechanism (3 attempts), timeout handling (30s), comprehensive error variants
 - **Model Validation**: Individual and comprehensive model validation, startup validation, runtime health checks
 - **Reliability**: Robust error recovery, proper timeout management, detailed logging throughout
 - **Health Monitoring**: Dedicated health check endpoint with model status reporting
 
-## Docker Infrastructure:
+## 21) Docker Infrastructure:
 
 ### Production-Ready Deployment
 - **Multi-stage Docker builds** for optimized production images
@@ -560,7 +588,7 @@ Test summary (latest run):
 - `docker-compose.yml` - Complete service orchestration
 - `.dockerignore` - Build optimization
 
-## Current Status:
+## 22) Current Status:
 
 The framework is now **production-ready** with:
 - Comprehensive bias detection covering multiple categories including harmful language
@@ -587,7 +615,7 @@ The framework is now **production-ready** with:
 - **Configurable semantic thresholds** via environment variables
 - **Multilingual support** for 100+ languages via Mistral translation API
 
-## Next Steps:
+## 23) Next Steps:
 
 1. **Deploy to production** using the Docker infrastructure
 2. **Monitor and tune** bias detection patterns based on real-world usage
