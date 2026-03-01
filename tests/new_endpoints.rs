@@ -4,8 +4,8 @@ use prompt_sentinel::modules::eu_law_compliance::dtos::{
     ComplianceConfigurationRequest, ComplianceReportRequest, RiskThresholds,
 };
 use prompt_sentinel::modules::eu_law_compliance::service::EuLawComplianceService;
-use prompt_sentinel::modules::mistral_ai::service::MistralService;
 use prompt_sentinel::modules::mistral_ai::client::MockMistralClient;
+use prompt_sentinel::modules::mistral_ai::service::MistralService;
 use std::sync::Arc;
 
 #[tokio::test]
@@ -19,10 +19,13 @@ async fn test_model_validation_endpoint() {
     );
 
     let response = service.validate_models_endpoint().await;
-    
+
     assert_eq!(response.generation_model.model_name, "mistral-large-latest");
     assert!(response.generation_model.available);
-    assert_eq!(response.moderation_model.as_ref().unwrap().model_name, "mistral-large-latest");
+    assert_eq!(
+        response.moderation_model.as_ref().unwrap().model_name,
+        "mistral-large-latest"
+    );
     assert!(response.moderation_model.as_ref().unwrap().available);
     assert_eq!(response.embedding_model.model_name, "mistral-embed");
     assert!(response.embedding_model.available);
@@ -32,7 +35,7 @@ async fn test_model_validation_endpoint() {
 #[test]
 fn test_compliance_report_generation() {
     let service = EuLawComplianceService::default();
-    
+
     let request = ComplianceReportRequest {
         intended_use: "AI-powered chatbot for customer support".to_string(),
         request_timestamp: Utc::now(),
@@ -41,7 +44,7 @@ fn test_compliance_report_generation() {
     };
 
     let response = service.generate_compliance_report(request);
-    
+
     assert!(response.report_id.contains("test-123"));
     assert!(response.compliant);
     assert!(!response.pdf_available);
@@ -59,13 +62,17 @@ fn test_compliance_configuration_management() {
     // Save original keywords to restore later (read from file)
     let original_config: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string("config/eu_risk_keywords.json")
-            .expect("Failed to read original config")
-    ).expect("Failed to parse original config");
+            .expect("Failed to read original config"),
+    )
+    .expect("Failed to parse original config");
 
     // Test updating configuration with temporary values
     let update_request = ComplianceConfigurationRequest {
         risk_thresholds: Some(RiskThresholds {
-            unacceptable_keywords: Some(vec!["social scoring".to_string(), "new prohibited use".to_string()]),
+            unacceptable_keywords: Some(vec![
+                "social scoring".to_string(),
+                "new prohibited use".to_string(),
+            ]),
             high_risk_keywords: None,
             limited_risk_keywords: None,
         }),
@@ -90,7 +97,7 @@ fn test_compliance_configuration_management() {
                     .unwrap()
                     .iter()
                     .map(|v| v.as_str().unwrap().to_string())
-                    .collect()
+                    .collect(),
             ),
             high_risk_keywords: Some(
                 original_config["high"]
@@ -98,7 +105,7 @@ fn test_compliance_configuration_management() {
                     .unwrap()
                     .iter()
                     .map(|v| v.as_str().unwrap().to_string())
-                    .collect()
+                    .collect(),
             ),
             limited_risk_keywords: Some(
                 original_config["limited"]
@@ -106,7 +113,7 @@ fn test_compliance_configuration_management() {
                     .unwrap()
                     .iter()
                     .map(|v| v.as_str().unwrap().to_string())
-                    .collect()
+                    .collect(),
             ),
         }),
         documentation_requirements: None,
@@ -117,7 +124,10 @@ fn test_compliance_configuration_management() {
 
     // Verify restoration
     let restored_config = service.get_current_configuration();
-    assert_eq!(restored_config.risk_keyword_counts.unacceptable, initial_unacceptable_count);
+    assert_eq!(
+        restored_config.risk_keyword_counts.unacceptable,
+        initial_unacceptable_count
+    );
 }
 
 #[test]
@@ -131,7 +141,7 @@ fn test_audit_trail_filters() {
         end_time: None,
         correlation_id: None,
     };
-    
+
     // The actual implementation would be tested with a real storage backend
     // This is just a placeholder to show the API works
     assert_eq!(request.limit.unwrap(), 10);

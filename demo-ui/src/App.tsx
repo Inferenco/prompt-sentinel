@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import { api } from './api';
-import type { ComplianceResponse, HealthStatus, FirewallResult, SemanticResult, BiasResult, AuditProof, DecisionEvidence } from './types';
+import type { HealthStatus, FirewallResult, SemanticResult, BiasResult, AuditProof, DecisionEvidence } from './types';
 import type { PipelineStatus } from './components/Pipeline';
 
 // Components
@@ -61,82 +61,49 @@ function App() {
     setCorrelationId(null);
 
     const startTime = Date.now();
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
 
     try {
-      // Simulate pipeline steps animation (since API returns all at once)
-      const animatePipeline = async (finalData: ComplianceResponse) => {
-        setCorrelationId(finalData.correlation_id);
-        const steps = [
-          { ms: 300, step: 1 },  // Firewall
-          { ms: 400, step: 2 },  // Semantic
-          { ms: 300, step: 3 },  // Bias
-          { ms: 400, step: 4 },  // Input Mod
-          { ms: 1000, step: 5 }, // Gen
-          { ms: 300, step: 6 },  // Output Mod
-          { ms: 200, step: 7 }   // Audit
-        ];
-
-        for (let i = 0; i < steps.length; i++) {
-          setActiveStep(i);
-          await new Promise(r => setTimeout(r, steps[i].ms));
-
-          if (i === 0) setFirewallResult(finalData.firewall);
-          if (i === 1) setSemanticResult(finalData.semantic);
-          if (i === 2) setBiasResult(finalData.bias);
-
-          // Check for blocks at appropriate steps
-          if (i === 0 && finalData.status === 'BlockedByFirewall') {
-            setStatus('BlockedByFirewall');
-            setAuditProof(finalData.audit_proof);
-            setDecisionEvidence(finalData.decision_evidence);
-            setLoading(false);
-            setTimeMs(Date.now() - startTime);
-            return;
-          }
-          if (i === 1 && finalData.status === 'BlockedBySemantic') {
-            setStatus('BlockedBySemantic');
-            setAuditProof(finalData.audit_proof);
-            setDecisionEvidence(finalData.decision_evidence);
-            setLoading(false);
-            setTimeMs(Date.now() - startTime);
-            return;
-          }
-          if (i === 3 && finalData.status === 'BlockedByInputModeration') {
-            setStatus('BlockedByInputModeration');
-            setAuditProof(finalData.audit_proof);
-            setDecisionEvidence(finalData.decision_evidence);
-            setLoading(false);
-            setTimeMs(Date.now() - startTime);
-            return;
-          }
-          if (i === 4 && finalData.generated_text) setResponse(finalData.generated_text);
-          if (i === 5 && finalData.status === 'BlockedByOutputModeration') {
-            setStatus('BlockedByOutputModeration');
-            setResponse(null);
-            setAuditProof(finalData.audit_proof);
-            setDecisionEvidence(finalData.decision_evidence);
-            setLoading(false);
-            setTimeMs(Date.now() - startTime);
-            return;
-          }
-        }
-
-        setActiveStep(7);
-        setStatus(finalData.status === 'Sanitized' ? 'Sanitized' : 'Completed');
-        setAuditProof(finalData.audit_proof);
-        setDecisionEvidence(finalData.decision_evidence);
-        setLoading(false);
-        setTimeMs(Date.now() - startTime);
-      };
+      // Keep pipeline visibly active while request is in flight.
+      progressInterval = setInterval(() => {
+        setActiveStep((prev) => (prev + 1) % 7);
+      }, 450);
 
       const data = await api.checkCompliance(prompt);
-      await animatePipeline(data);
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+
+      setCorrelationId(data.correlation_id);
+      setFirewallResult(data.firewall);
+      setSemanticResult(data.semantic);
+      setBiasResult(data.bias);
+      setResponse(data.generated_text ?? null);
+      setAuditProof(data.audit_proof);
+      setDecisionEvidence(data.decision_evidence);
+      setStatus(data.status);
+
+      // Pipeline component marks the previous step as blocked.
+      const finalStep =
+        data.status === 'BlockedByFirewall' ? 1 :
+        data.status === 'BlockedBySemantic' ? 2 :
+        data.status === 'BlockedByInputModeration' ? 4 :
+        data.status === 'BlockedByOutputModeration' ? 6 :
+        7;
+      setActiveStep(finalStep);
+
+      setLoading(false);
+      setTimeMs(Date.now() - startTime);
 
     } catch (error) {
       console.error(error);
       setStatus('Idle');
       setLoading(false);
       alert('Failed to analyze prompt. Ensure backend is running.');
+    } finally {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
     }
   };
 

@@ -4,6 +4,11 @@ use std::num::ParseIntError;
 
 use thiserror::Error;
 
+pub const DEFAULT_MISTRAL_BASE_URL: &str = "https://api.mistral.ai";
+pub const DEFAULT_MISTRAL_GENERATION_MODEL: &str = "mistral-small-latest";
+pub const DEFAULT_MISTRAL_MODERATION_MODEL: &str = "mistral-moderation-latest";
+pub const DEFAULT_MISTRAL_EMBEDDING_MODEL: &str = "mistral-embed";
+
 #[derive(Clone, Debug)]
 pub struct AppSettings {
     pub server_port: u16,
@@ -32,13 +37,15 @@ impl AppSettings {
             server_port,
             mistral_api_key: env::var("MISTRAL_API_KEY").ok().filter(|v| !v.is_empty()),
             mistral_base_url: env::var("MISTRAL_BASE_URL")
-                .unwrap_or_else(|_| "https://api.mistral.ai".to_owned()),
+                .unwrap_or_else(|_| DEFAULT_MISTRAL_BASE_URL.to_owned()),
             generation_model: env::var("MISTRAL_GENERATION_MODEL")
-                .unwrap_or_else(|_| "mistral-large-latest".to_owned()),
-            moderation_model: Some(env::var("MISTRAL_MODERATION_MODEL")
-                .unwrap_or_else(|_| "mistral-moderation-latest".to_owned())),
+                .unwrap_or_else(|_| DEFAULT_MISTRAL_GENERATION_MODEL.to_owned()),
+            moderation_model: Some(
+                env::var("MISTRAL_MODERATION_MODEL")
+                    .unwrap_or_else(|_| DEFAULT_MISTRAL_MODERATION_MODEL.to_owned()),
+            ),
             embedding_model: env::var("MISTRAL_EMBEDDING_MODEL")
-                .unwrap_or_else(|_| "mistral-embed".to_owned()),
+                .unwrap_or_else(|_| DEFAULT_MISTRAL_EMBEDDING_MODEL.to_owned()),
             bias_threshold,
             max_input_length,
             semantic_medium_threshold,

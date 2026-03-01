@@ -5,9 +5,9 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use super::dtos::{
-    ComplianceCheckRequest, ComplianceCheckResponse, ComplianceReportRequest, 
-    ComplianceReportResponse, ComplianceConfigurationRequest, ComplianceConfigurationResponse,
-    ComplianceConfigurationSummary, RiskKeywordCounts, DocumentationRequirements
+    ComplianceCheckRequest, ComplianceCheckResponse, ComplianceConfigurationRequest,
+    ComplianceConfigurationResponse, ComplianceConfigurationSummary, ComplianceReportRequest,
+    ComplianceReportResponse, DocumentationRequirements, RiskKeywordCounts,
 };
 use super::model::{AiRiskTier, ComplianceFinding};
 
@@ -89,13 +89,13 @@ impl ConfigManager {
 
     fn update_config(&self, new_config: EuRiskKeywordConfig) -> Result<(), std::io::Error> {
         let mut guard = self.config.write().unwrap();
-        
+
         // Save to file first
         save_risk_keywords(&new_config)?;
-        
+
         // Update in-memory config
         *guard = new_config;
-        
+
         Ok(())
     }
 }
@@ -165,7 +165,10 @@ impl EuLawComplianceService {
         }
     }
 
-    pub fn generate_compliance_report(&self, request: ComplianceReportRequest) -> ComplianceReportResponse {
+    pub fn generate_compliance_report(
+        &self,
+        request: ComplianceReportRequest,
+    ) -> ComplianceReportResponse {
         let check_response = self.check(ComplianceCheckRequest {
             intended_use: request.intended_use,
             technical_documentation_available: true,
@@ -181,7 +184,10 @@ impl EuLawComplianceService {
             generated_at: Utc::now(),
             pdf_available: request.generate_pdf,
             pdf_url: if request.generate_pdf {
-                Some(format!("/api/compliance/reports/{}/pdf", request.correlation_id))
+                Some(format!(
+                    "/api/compliance/reports/{}/pdf",
+                    request.correlation_id
+                ))
             } else {
                 None
             },
@@ -190,7 +196,7 @@ impl EuLawComplianceService {
 
     pub fn get_current_configuration(&self) -> ComplianceConfigurationSummary {
         let keywords = CONFIG_MANAGER.get_config();
-        
+
         ComplianceConfigurationSummary {
             risk_keyword_counts: RiskKeywordCounts {
                 unacceptable: keywords.unacceptable.len(),
@@ -205,11 +211,14 @@ impl EuLawComplianceService {
         }
     }
 
-    pub fn update_configuration(&self, request: ComplianceConfigurationRequest) -> ComplianceConfigurationResponse {
+    pub fn update_configuration(
+        &self,
+        request: ComplianceConfigurationRequest,
+    ) -> ComplianceConfigurationResponse {
         // Load current configuration
         let current_config = CONFIG_MANAGER.get_config();
         let mut new_config = current_config.clone();
-        
+
         // Apply updates from request
         if let Some(risk_thresholds) = request.risk_thresholds {
             if let Some(keywords) = risk_thresholds.unacceptable_keywords {
@@ -228,23 +237,19 @@ impl EuLawComplianceService {
                 }
             }
         }
-        
+
         // Save updated configuration to file and memory
         match CONFIG_MANAGER.update_config(new_config) {
-            Ok(_) => {
-                ComplianceConfigurationResponse {
-                    status: "success".to_string(),
-                    message: "Configuration updated successfully".to_string(),
-                    current_configuration: self.get_current_configuration(),
-                }
-            }
-            Err(e) => {
-                ComplianceConfigurationResponse {
-                    status: "error".to_string(),
-                    message: format!("Failed to update configuration: {}", e),
-                    current_configuration: self.get_current_configuration(),
-                }
-            }
+            Ok(_) => ComplianceConfigurationResponse {
+                status: "success".to_string(),
+                message: "Configuration updated successfully".to_string(),
+                current_configuration: self.get_current_configuration(),
+            },
+            Err(e) => ComplianceConfigurationResponse {
+                status: "error".to_string(),
+                message: format!("Failed to update configuration: {}", e),
+                current_configuration: self.get_current_configuration(),
+            },
         }
     }
 }
@@ -281,15 +286,15 @@ fn contains_any(text: &str, keywords: &[String]) -> bool {
 fn save_risk_keywords(config: &EuRiskKeywordConfig) -> Result<(), std::io::Error> {
     let path =
         std::env::var(EU_KEYWORDS_PATH_ENV).unwrap_or_else(|_| DEFAULT_EU_KEYWORDS_PATH.to_owned());
-    
+
     // Create directory if it doesn't exist
     if let Some(parent) = std::path::Path::new(&path).parent() {
         std::fs::create_dir_all(parent)?;
     }
-    
+
     let content = serde_json::to_string_pretty(config)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
-    
+
     fs::write(path, content)
 }
 

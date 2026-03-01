@@ -47,8 +47,8 @@ const RULES: &[BiasRule] = &[
     BiasRule {
         category: BiasCategory::RaceEthnicity,
         terms: &[
-            "those people are", 
-            "all immigrants", 
+            "those people are",
+            "all immigrants",
             "racially inferior",
             "all [race] are",
             "[race] people are",
@@ -63,8 +63,8 @@ const RULES: &[BiasRule] = &[
     BiasRule {
         category: BiasCategory::Age,
         terms: &[
-            "too old to", 
-            "young people are lazy", 
+            "too old to",
+            "young people are lazy",
             "elderly cannot",
             "old people are",
             "millennials are",
@@ -78,8 +78,8 @@ const RULES: &[BiasRule] = &[
     BiasRule {
         category: BiasCategory::Religion,
         terms: &[
-            "all muslims", 
-            "all christians", 
+            "all muslims",
+            "all christians",
             "religion makes people",
             "all [religion] are",
             "[religion] people are",
@@ -93,7 +93,7 @@ const RULES: &[BiasRule] = &[
     BiasRule {
         category: BiasCategory::Disability,
         terms: &[
-            "disabled people cannot", 
+            "disabled people cannot",
             "wheelchair bound people are",
             "retarded",
             "crippled",
@@ -107,7 +107,7 @@ const RULES: &[BiasRule] = &[
     BiasRule {
         category: BiasCategory::SocioEconomic,
         terms: &[
-            "poor people are lazy", 
+            "poor people are lazy",
             "low income people are dishonest",
             "rich people are greedy",
             "welfare queens",
