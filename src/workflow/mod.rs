@@ -115,6 +115,30 @@ impl ComplianceEngine {
         &self.audit_logger
     }
 
+    /// Detect the language of the original prompt
+    async fn detect_original_language(&self, prompt: &str) -> String {
+        // Default to English if detection fails
+        let Ok(lang_detection) = self.mistral_service.detect_language(prompt.to_owned()).await
+        else {
+            return "English".to_string();
+        };
+        
+        lang_detection.language
+    }
+
+    /// Translate text back to the original language
+    async fn translate_to_original_language(&self, text: &str, target_language: &str) -> String {
+        // If translation fails, return original English text
+        let Ok(translation) = self.mistral_service
+            .translate_text(text.to_owned(), target_language.to_owned())
+            .await
+        else {
+            return text.to_owned();
+        };
+        
+        translation.translated_text
+    }
+
     pub async fn process(
         &self,
         request: ComplianceRequest,
@@ -131,6 +155,14 @@ impl ComplianceEngine {
             &correlation_id,
             tracing::Level::INFO,
             "Starting compliance workflow",
+        );
+
+        // Detect original language for response translation
+        let original_language = self.detect_original_language(&original_prompt).await;
+        log_with_correlation(
+            &correlation_id,
+            tracing::Level::DEBUG,
+            &format!("Detected original language: {}", original_language),
         );
 
         // Step 1: Firewall check (fast, deterministic)
@@ -362,7 +394,17 @@ impl ComplianceEngine {
             .generate_text(firewall.sanitized_prompt.clone(), true)
             .await?;
 
-        // Output moderation
+        // Clone the English output for moderation and audit logging
+        let english_output = generation.output_text.clone();
+        
+        // Translate generated text back to original language if needed
+        let generated_text = if original_language.to_lowercase() != "english" {
+            self.translate_to_original_language(&english_output, &original_language).await
+        } else {
+            english_output.clone()
+        };
+
+        // Output moderation (moderate the English version before translation)
         log_with_correlation(
             &correlation_id,
             tracing::Level::INFO,
@@ -370,7 +412,7 @@ impl ComplianceEngine {
         );
         let output_moderation = self
             .mistral_service
-            .moderate_text(generation.output_text.clone())
+            .moderate_text(english_output.clone())
             .await?;
 
         if output_moderation.flagged {
@@ -415,7 +457,7 @@ impl ComplianceEngine {
                 final_status: "blocked_by_output_moderation".to_owned(),
                 final_reason: evidence.final_reason.clone(),
                 model_used: Some(generation.model),
-                output_preview: Some(generation.output_text.chars().take(160).collect()),
+                output_preview: Some(english_output.chars().take(160).collect()),
             })?;
 
             return Ok(ComplianceResponse {
@@ -494,7 +536,7 @@ impl ComplianceEngine {
             .to_owned(),
             final_reason: evidence.final_reason.clone(),
             model_used: Some(generation.model.clone()),
-            output_preview: Some(generation.output_text.chars().take(160).collect()),
+            output_preview: Some(english_output.chars().take(160).collect()),
         })?;
 
         log_with_correlation(
@@ -502,7 +544,7 @@ impl ComplianceEngine {
             tracing::Level::DEBUG,
             &format!(
                 "Generated text preview: {}",
-                generation.output_text.chars().take(160).collect::<String>()
+                generated_text.chars().take(160).collect::<String>()
             ),
         );
 
@@ -514,7 +556,7 @@ impl ComplianceEngine {
             bias,
             input_moderation: Some(input_moderation),
             output_moderation: Some(output_moderation),
-            generated_text: Some(generation.output_text),
+            generated_text: Some(generated_text),
             audit_proof: proof,
             decision_evidence: Some(evidence),
         })
