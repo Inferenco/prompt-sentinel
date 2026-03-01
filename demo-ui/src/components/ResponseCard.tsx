@@ -32,7 +32,7 @@ export const ResponseCard: React.FC<ResponseCardProps> = ({ response, status, lo
                         <p>The generation was halted because the prompt or response violated security/compliance policies.</p>
                     </div>
                 )}
-                {!loading && response && status === 'Completed' && (
+                {!loading && response && (status === 'Completed' || status === 'Sanitized') && (
                     <div className="response-text">
                         {response.split('\\n').map((line, i) => (
                             <React.Fragment key={i}>

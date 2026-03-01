@@ -17,45 +17,132 @@ struct BiasRule {
 }
 
 const RULES: &[BiasRule] = &[
+    // Gender bias
     BiasRule {
         category: BiasCategory::Gender,
         terms: &[
             "women are bad at",
+            "women are generally bad at",
             "men are naturally better",
             "female drivers",
+            "women belong in",
+            "men are superior",
+            "man is superior",
+            "male superiority",
+            "men are better",
+            "man is better",
+            "girls can't",
+            "boys are better at",
+            "women can't",
+            "men are smarter",
+            "man is smarter",
+            "explain why men make better",
+            "why men are better",
+            "men make better engineers",
         ],
         weight: 0.35,
         hint: "Avoid gender generalizations and attribute behavior to individuals.",
     },
+    // Race/Ethnicity bias
     BiasRule {
         category: BiasCategory::RaceEthnicity,
-        terms: &["those people are", "all immigrants", "racially inferior"],
+        terms: &[
+            "those people are", 
+            "all immigrants", 
+            "racially inferior",
+            "all [race] are",
+            "[race] people are",
+            "illegal alien",
+            "ghetto",
+            "thug",
+        ],
         weight: 0.45,
         hint: "Avoid race/ethnicity stereotypes and use evidence-based wording.",
     },
+    // Age bias
     BiasRule {
         category: BiasCategory::Age,
-        terms: &["too old to", "young people are lazy", "elderly cannot"],
+        terms: &[
+            "too old to", 
+            "young people are lazy", 
+            "elderly cannot",
+            "old people are",
+            "millennials are",
+            "boomers are",
+            "senile",
+        ],
         weight: 0.30,
         hint: "Reframe age assumptions as role-specific skill criteria.",
     },
+    // Religion bias
     BiasRule {
         category: BiasCategory::Religion,
-        terms: &["all muslims", "all christians", "religion makes people"],
+        terms: &[
+            "all muslims", 
+            "all christians", 
+            "religion makes people",
+            "all [religion] are",
+            "[religion] people are",
+            "infidel",
+            "heathen",
+        ],
         weight: 0.40,
         hint: "Use respectful, non-generalizing language about faith groups.",
     },
+    // Disability bias
     BiasRule {
         category: BiasCategory::Disability,
-        terms: &["disabled people cannot", "wheelchair bound people are"],
+        terms: &[
+            "disabled people cannot", 
+            "wheelchair bound people are",
+            "retarded",
+            "crippled",
+            "mentally ill people are",
+            "autistic people are",
+        ],
         weight: 0.40,
         hint: "Use person-first wording and avoid assumptions about capability.",
     },
+    // Socioeconomic bias
     BiasRule {
         category: BiasCategory::SocioEconomic,
-        terms: &["poor people are lazy", "low income people are dishonest"],
+        terms: &[
+            "poor people are lazy", 
+            "low income people are dishonest",
+            "rich people are greedy",
+            "welfare queens",
+            "trailer trash",
+            "white trash",
+        ],
         weight: 0.35,
         hint: "Avoid socioeconomic stereotyping and reference context factors.",
+    },
+    // Harmful language
+    BiasRule {
+        category: BiasCategory::HarmfulLanguage,
+        terms: &[
+            "credit card",
+            "ash hole",
+            "asshole",
+            "fuck",
+            "shit",
+            "bitch",
+            "whore",
+            "cunt",
+            "dick",
+            "pussy",
+            "nigger",
+            "faggot",
+            "retard",
+            "kill yourself",
+            "die",
+            "suicide",
+            "rape",
+            "pedo",
+            "child porn",
+        ],
+        weight: 0.50,
+        hint: "Avoid offensive, harmful, or dangerous language.",
     },
 ];
 

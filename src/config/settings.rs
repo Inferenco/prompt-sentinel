@@ -14,6 +14,10 @@ pub struct AppSettings {
     pub embedding_model: String,
     pub bias_threshold: f32,
     pub max_input_length: usize,
+    /// Threshold for semantic Low/Medium boundary (default: 0.70)
+    pub semantic_medium_threshold: f32,
+    /// Threshold for semantic Medium/High boundary (default: 0.80)
+    pub semantic_high_threshold: f32,
 }
 
 impl AppSettings {
@@ -21,6 +25,8 @@ impl AppSettings {
         let server_port = parse_env_u16("SERVER_PORT", 3000)?;
         let bias_threshold = parse_env_f32("BIAS_THRESHOLD", 0.35)?;
         let max_input_length = parse_env_usize("MAX_INPUT_LENGTH", 4096)?;
+        let semantic_medium_threshold = parse_env_f32("SEMANTIC_MEDIUM_THRESHOLD", 0.70)?;
+        let semantic_high_threshold = parse_env_f32("SEMANTIC_HIGH_THRESHOLD", 0.80)?;
 
         Ok(Self {
             server_port,
@@ -35,6 +41,8 @@ impl AppSettings {
                 .unwrap_or_else(|_| "mistral-embed".to_owned()),
             bias_threshold,
             max_input_length,
+            semantic_medium_threshold,
+            semantic_high_threshold,
         })
     }
 }

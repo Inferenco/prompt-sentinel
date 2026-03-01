@@ -1,0 +1,36 @@
+services:
+  prompt-sentinel:
+    build: .
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    environment:
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - RUST_LOG=${RUST_LOG}
+      - SERVER_PORT=${SERVER_PORT}
+      - SLED_DB_PATH=${SLED_DB_PATH}
+      - SEMANTIC_MEDIUM_THRESHOLD=${SEMANTIC_MEDIUM_THRESHOLD}
+      - SEMANTIC_HIGH_THRESHOLD=${SEMANTIC_HIGH_THRESHOLD}
+    volumes:
+      - sled-data:/data
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    restart: unless-stopped
+
+  demo-ui:
+    build:
+      context: ./demo-ui
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+    ports:
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+    environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+    depends_on:
+      - prompt-sentinel
+    restart: unless-stopped
+
+volumes:
+  sled-data:
+    driver: local

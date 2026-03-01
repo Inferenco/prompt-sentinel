@@ -42,7 +42,7 @@ impl HttpMistralClient {
     pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Self {
         Self {
             http: Client::builder()
-                .timeout(Duration::from_secs(30))
+                .timeout(Duration::from_secs(120)) // Increased timeout from 30s to 60s
                 .build()
                 .unwrap(),
             base_url: base_url.into(),
@@ -66,21 +66,43 @@ impl HttpMistralClient {
             match request_builder.try_clone() {
                 Some(cloned_builder) => {
                     debug!("Attempt {} for Mistral API request", attempt + 1);
-                    
+
                     match cloned_builder.send().await {
                         Ok(response) => {
+                            let status = response.status();
                             if response.status().is_success() {
                                 let json = response.json::<T>().await?;
                                 debug!("Mistral API request successful");
                                 return Ok(json);
                             } else {
-                                let status = response.status();
                                 let error_body = response.text().await.unwrap_or_default();
                                 error!("Mistral API error {}: {}", status, error_body);
-                                last_error = Some(MistralClientError::ApiError {
-                                    status: status.as_u16(),
-                                    message: error_body,
-                                });
+
+                                // Enhanced error handling for specific status codes
+                                if status == reqwest::StatusCode::BAD_REQUEST {
+                                    last_error = Some(MistralClientError::ApiError {
+                                        status: status.as_u16(),
+                                        message: format!(
+                                            "Bad request - likely content violation: {}",
+                                            error_body
+                                        ),
+                                    });
+                                } else if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                                    last_error = Some(MistralClientError::ApiError {
+                                        status: status.as_u16(),
+                                        message: format!("Rate limited: {}", error_body),
+                                    });
+                                } else if status == reqwest::StatusCode::PAYLOAD_TOO_LARGE {
+                                    last_error = Some(MistralClientError::ApiError {
+                                        status: status.as_u16(),
+                                        message: format!("Prompt too large: {}", error_body),
+                                    });
+                                } else {
+                                    last_error = Some(MistralClientError::ApiError {
+                                        status: status.as_u16(),
+                                        message: error_body,
+                                    });
+                                }
                             }
                         }
                         Err(e) => {
@@ -91,7 +113,7 @@ impl HttpMistralClient {
                 }
                 None => {
                     return Err(MistralClientError::InvalidResponse(
-                        "Failed to clone request builder".to_owned()
+                        "Failed to clone request builder".to_owned(),
                     ));
                 }
             }
@@ -102,9 +124,9 @@ impl HttpMistralClient {
             }
         }
 
-        Err(last_error.unwrap_or_else(|| MistralClientError::InvalidResponse(
-            "All retry attempts failed".to_owned()
-        )))
+        Err(last_error.unwrap_or_else(|| {
+            MistralClientError::InvalidResponse("All retry attempts failed".to_owned())
+        }))
     }
 }
 
@@ -114,8 +136,11 @@ impl MistralClient for HttpMistralClient {
         &self,
         request: ChatCompletionRequest,
     ) -> Result<ChatCompletionResponse, MistralClientError> {
-        info!("Sending chat completion request to model: {}", request.model);
-        
+        info!(
+            "Sending chat completion request to model: {}",
+            request.model
+        );
+
         let request_builder = self
             .http
             .post(self.url("/v1/chat/completions"))
@@ -139,7 +164,7 @@ impl MistralClient for HttpMistralClient {
         request: ModerationRequest,
     ) -> Result<ModerationResponse, MistralClientError> {
         info!("Sending moderation request");
-        
+
         let request_builder = self
             .http
             .post(self.url("/v1/moderations"))
@@ -175,7 +200,10 @@ impl MistralClient for HttpMistralClient {
             0.0
         };
 
-        debug!("Moderation completed: flagged={}, severity={}", flagged, severity);
+        debug!(
+            "Moderation completed: flagged={}, severity={}",
+            flagged, severity
+        );
         Ok(ModerationResponse {
             flagged,
             categories,
@@ -188,7 +216,7 @@ impl MistralClient for HttpMistralClient {
         request: EmbeddingRequest,
     ) -> Result<EmbeddingResponse, MistralClientError> {
         info!("Sending embedding request for model: {}", request.model);
-        
+
         let request_builder = self
             .http
             .post(self.url("/v1/embeddings"))
@@ -220,7 +248,7 @@ impl MistralClient for HttpMistralClient {
 
     async fn list_models(&self) -> Result<ModelListResponse, MistralClientError> {
         info!("Fetching available models from Mistral API");
-        
+
         let request_builder = self
             .http
             .get(self.url("/v1/models"))

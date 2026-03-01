@@ -21,6 +21,7 @@ use crate::modules::mistral_ai::client::{HttpMistralClient, MistralClient};
 use crate::modules::mistral_ai::dtos::ModelValidationResponse;
 use crate::modules::mistral_ai::service::MistralService;
 use crate::modules::prompt_firewall::service::PromptFirewallService;
+use crate::modules::semantic_detection::service::SemanticDetectionService;
 use crate::modules::telemetry::correlation::generate_correlation_id;
 use crate::modules::telemetry::metrics::{get_metrics, RequestTimer};
 use crate::modules::telemetry::tracing::{log_with_correlation, create_span_with_correlation};
@@ -286,6 +287,8 @@ impl FrameworkConfig {
             embedding_model: "mistral-embed".to_string(),
             bias_threshold: 0.35,
             max_input_length: 4096,
+            semantic_medium_threshold: 0.70,
+            semantic_high_threshold: 0.80,
         });
 
         let audit_storage: Arc<dyn AuditStorage> =
@@ -317,8 +320,22 @@ impl FrameworkConfig {
         })?;
         info!("All Mistral models validated successfully");
 
+        // Initialize semantic detection service
+        let semantic_service = SemanticDetectionService::new(
+            mistral_service.clone(),
+            settings.semantic_medium_threshold,
+            settings.semantic_high_threshold,
+        );
+        info!("Initializing semantic detection service...");
+        semantic_service.initialize().await.map_err(|e| {
+            error!("Semantic detection initialization failed: {}", e);
+            Box::new(e) as Box<dyn std::error::Error>
+        })?;
+        info!("Semantic detection service initialized successfully");
+
         let engine = ComplianceEngine::new(
             firewall_service,
+            semantic_service,
             bias_service,
             mistral_service,
             audit_logger,
