@@ -10,6 +10,9 @@ services:
       - SLED_DB_PATH=${SLED_DB_PATH}
     volumes:
       - sled-data:/data
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     restart: unless-stopped
 
   demo-ui:
