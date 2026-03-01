@@ -134,16 +134,22 @@ impl ComplianceEngine {
         );
 
         // Step 1: Firewall check (fast, deterministic)
-        let firewall = self.firewall_service.inspect(PromptFirewallRequest {
-            prompt: original_prompt.clone(),
-            correlation_id: Some(correlation_id.clone()),
-        });
+        let firewall = self
+            .firewall_service
+            .inspect(PromptFirewallRequest {
+                prompt: original_prompt.clone(),
+                correlation_id: Some(correlation_id.clone()),
+            })
+            .await;
 
         // Step 2: Bias detection
-        let bias = self.bias_service.scan(BiasScanRequest {
-            text: firewall.sanitized_prompt.clone(),
-            threshold: None,
-        });
+        let bias = self
+            .bias_service
+            .scan(BiasScanRequest {
+                text: firewall.sanitized_prompt.clone(),
+                threshold: None,
+            })
+            .await;
 
         // Policy combiner: Apply precedence rules
         // 1. Firewall Block -> Block
@@ -219,63 +225,63 @@ impl ComplianceEngine {
         let input_moderation = input_moderation_result?;
 
         // 2. Semantic High -> Block
-        if let Some(ref sem) = semantic {
-            if sem.risk_level == SemanticRiskLevel::High {
-                let evidence = DecisionEvidence {
-                    firewall_action: format!("{:?}", firewall.action),
-                    firewall_matched_rules: firewall.matched_rules.clone(),
-                    semantic_risk_score: Some(sem.risk_score),
-                    semantic_matched_template: sem.nearest_template_id.clone(),
-                    semantic_category: sem.category.clone(),
-                    moderation_flagged: false,
-                    moderation_categories: vec![],
-                    final_decision: "block".to_string(),
-                    final_reason: format!(
-                        "Semantic similarity to attack pattern {} (category: {}, score: {:.2})",
-                        sem.nearest_template_id.as_deref().unwrap_or("unknown"),
-                        sem.category.as_deref().unwrap_or("unknown"),
-                        sem.similarity
-                    ),
-                };
+        if let Some(ref sem) = semantic
+            && sem.risk_level == SemanticRiskLevel::High
+        {
+            let evidence = DecisionEvidence {
+                firewall_action: format!("{:?}", firewall.action),
+                firewall_matched_rules: firewall.matched_rules.clone(),
+                semantic_risk_score: Some(sem.risk_score),
+                semantic_matched_template: sem.nearest_template_id.clone(),
+                semantic_category: sem.category.clone(),
+                moderation_flagged: false,
+                moderation_categories: vec![],
+                final_decision: "block".to_string(),
+                final_reason: format!(
+                    "Semantic similarity to attack pattern {} (category: {}, score: {:.2})",
+                    sem.nearest_template_id.as_deref().unwrap_or("unknown"),
+                    sem.category.as_deref().unwrap_or("unknown"),
+                    sem.similarity
+                ),
+            };
 
-                log_with_correlation(
-                    &correlation_id,
-                    tracing::Level::WARN,
-                    "Prompt blocked by semantic detection",
-                );
+            log_with_correlation(
+                &correlation_id,
+                tracing::Level::WARN,
+                "Prompt blocked by semantic detection",
+            );
 
-                let proof = self.audit_logger.log_event(AuditEvent {
-                    correlation_id: correlation_id.clone(),
-                    original_prompt: original_prompt.clone(),
-                    sanitized_prompt: firewall.sanitized_prompt.clone(),
-                    firewall_action: format!("{:?}", firewall.action),
-                    firewall_reasons: firewall.reasons.clone(),
-                    semantic_risk_score: Some(sem.risk_score),
-                    semantic_template_id: sem.nearest_template_id.clone(),
-                    semantic_category: sem.category.clone(),
-                    bias_score: bias.score,
-                    bias_level: format!("{:?}", bias.level),
-                    input_moderation_flagged: false,
-                    output_moderation_flagged: false,
-                    final_status: "blocked_by_semantic".to_owned(),
-                    final_reason: evidence.final_reason.clone(),
-                    model_used: None,
-                    output_preview: None,
-                })?;
+            let proof = self.audit_logger.log_event(AuditEvent {
+                correlation_id: correlation_id.clone(),
+                original_prompt: original_prompt.clone(),
+                sanitized_prompt: firewall.sanitized_prompt.clone(),
+                firewall_action: format!("{:?}", firewall.action),
+                firewall_reasons: firewall.reasons.clone(),
+                semantic_risk_score: Some(sem.risk_score),
+                semantic_template_id: sem.nearest_template_id.clone(),
+                semantic_category: sem.category.clone(),
+                bias_score: bias.score,
+                bias_level: format!("{:?}", bias.level),
+                input_moderation_flagged: false,
+                output_moderation_flagged: false,
+                final_status: "blocked_by_semantic".to_owned(),
+                final_reason: evidence.final_reason.clone(),
+                model_used: None,
+                output_preview: None,
+            })?;
 
-                return Ok(ComplianceResponse {
-                    correlation_id,
-                    status: WorkflowStatus::BlockedBySemantic,
-                    firewall,
-                    semantic,
-                    bias,
-                    input_moderation: None,
-                    output_moderation: None,
-                    generated_text: None,
-                    audit_proof: proof,
-                    decision_evidence: Some(evidence),
-                });
-            }
+            return Ok(ComplianceResponse {
+                correlation_id,
+                status: WorkflowStatus::BlockedBySemantic,
+                firewall,
+                semantic,
+                bias,
+                input_moderation: None,
+                output_moderation: None,
+                generated_text: None,
+                audit_proof: proof,
+                decision_evidence: Some(evidence),
+            });
         }
 
         // 3. Input moderation check
@@ -467,7 +473,7 @@ impl ComplianceEngine {
 
         let proof = self.audit_logger.log_event(AuditEvent {
             correlation_id: correlation_id.clone(),
-            original_prompt: original_prompt,
+            original_prompt,
             sanitized_prompt: firewall.sanitized_prompt.clone(),
             firewall_action: format!("{:?}", firewall.action),
             firewall_reasons: firewall.reasons.clone(),

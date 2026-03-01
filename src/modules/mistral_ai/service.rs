@@ -6,8 +6,9 @@ use tracing::{debug, error, info, warn};
 use super::client::{MistralClient, MistralClientError};
 use super::dtos::{
     ChatCompletionRequest, ChatCompletionResponse, ChatMessage, EmbeddingRequest,
-    EmbeddingResponse, ModelValidationResponse, ModelValidationStatus, ModerationRequest,
-    ModerationResponse,
+    EmbeddingResponse, LanguageDetectionRequest, LanguageDetectionResponse,
+    ModelValidationResponse, ModelValidationStatus, ModerationRequest, ModerationResponse,
+    TranslationRequest, TranslationResponse,
 };
 
 #[derive(Clone)]
@@ -134,6 +135,35 @@ impl MistralService {
             input: text.into(),
         };
         self.client.embeddings(request).await.map_err(Into::into)
+    }
+
+    pub async fn detect_language(
+        &self,
+        text: impl Into<String>,
+    ) -> Result<LanguageDetectionResponse, MistralServiceError> {
+        debug!("Detecting language of text");
+        let request = LanguageDetectionRequest { text: text.into() };
+        self.client
+            .detect_language(request)
+            .await
+            .map_err(Into::into)
+    }
+
+    pub async fn translate_text(
+        &self,
+        text: impl Into<String>,
+        target_language: impl Into<String> + Clone,
+    ) -> Result<TranslationResponse, MistralServiceError> {
+        let target_lang = target_language.clone();
+        debug!("Translating text to {}", target_lang.into());
+        let request = TranslationRequest {
+            text: text.into(),
+            target_language: target_language.into(),
+        };
+        self.client
+            .translate_text(request)
+            .await
+            .map_err(Into::into)
     }
 
     pub async fn health_check(&self) -> Result<(), MistralServiceError> {

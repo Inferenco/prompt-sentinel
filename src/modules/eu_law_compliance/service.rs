@@ -221,20 +221,20 @@ impl EuLawComplianceService {
 
         // Apply updates from request
         if let Some(risk_thresholds) = request.risk_thresholds {
-            if let Some(keywords) = risk_thresholds.unacceptable_keywords {
-                if !keywords.is_empty() {
-                    new_config.unacceptable = keywords;
-                }
+            if let Some(keywords) = risk_thresholds
+                .unacceptable_keywords
+                .filter(|k| !k.is_empty())
+            {
+                new_config.unacceptable = keywords;
             }
-            if let Some(keywords) = risk_thresholds.high_risk_keywords {
-                if !keywords.is_empty() {
-                    new_config.high = keywords;
-                }
+            if let Some(keywords) = risk_thresholds.high_risk_keywords.filter(|k| !k.is_empty()) {
+                new_config.high = keywords;
             }
-            if let Some(keywords) = risk_thresholds.limited_risk_keywords {
-                if !keywords.is_empty() {
-                    new_config.limited = keywords;
-                }
+            if let Some(keywords) = risk_thresholds
+                .limited_risk_keywords
+                .filter(|k| !k.is_empty())
+            {
+                new_config.limited = keywords;
             }
         }
 

@@ -66,11 +66,17 @@ pub struct RequestTimer {
     start: Instant,
 }
 
-impl RequestTimer {
-    pub fn new() -> Self {
+impl Default for RequestTimer {
+    fn default() -> Self {
         Self {
             start: Instant::now(),
         }
+    }
+}
+
+impl RequestTimer {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn elapsed_seconds(&self) -> f64 {

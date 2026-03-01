@@ -14,6 +14,28 @@ pub struct ChatCompletionRequest {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub struct LanguageDetectionRequest {
+    pub text: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct LanguageDetectionResponse {
+    pub language: String,
+    pub confidence: f32,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub struct TranslationRequest {
+    pub text: String,
+    pub target_language: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct TranslationResponse {
+    pub translated_text: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct ChatCompletionResponse {
     pub model: String,
     pub output_text: String,

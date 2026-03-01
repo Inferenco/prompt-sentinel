@@ -9,8 +9,10 @@ use tracing::{debug, error, info, warn};
 
 use super::dtos::{
     ChatCompletionRequest, ChatCompletionResponse, EmbeddingRequest, EmbeddingResponse,
-    ModelListResponse, ModerationRequest, ModerationResponse,
+    LanguageDetectionRequest, LanguageDetectionResponse, ModelListResponse, ModerationRequest,
+    ModerationResponse, TranslationRequest, TranslationResponse,
 };
+use crate::modules::mistral_ai::dtos::ChatMessage;
 
 #[async_trait]
 pub trait MistralClient: Send + Sync {
@@ -27,6 +29,14 @@ pub trait MistralClient: Send + Sync {
         request: EmbeddingRequest,
     ) -> Result<EmbeddingResponse, MistralClientError>;
     async fn list_models(&self) -> Result<ModelListResponse, MistralClientError>;
+    async fn detect_language(
+        &self,
+        request: LanguageDetectionRequest,
+    ) -> Result<LanguageDetectionResponse, MistralClientError>;
+    async fn translate_text(
+        &self,
+        request: TranslationRequest,
+    ) -> Result<TranslationResponse, MistralClientError>;
 }
 
 #[derive(Clone)]
@@ -267,6 +277,70 @@ impl MistralClient for HttpMistralClient {
         debug!("Available models: {:?}", models);
         Ok(ModelListResponse { models })
     }
+
+    async fn detect_language(
+        &self,
+        request: LanguageDetectionRequest,
+    ) -> Result<LanguageDetectionResponse, MistralClientError> {
+        info!("Detecting language for text");
+
+        let prompt = format!(
+            "What language is this text written in? Reply with ONLY the language name (e.g., 'English', 'German', 'Spanish', 'French', 'Chinese', etc.), nothing else.\n\nText: {}",
+            request.text
+        );
+
+        let chat_request = ChatCompletionRequest {
+            model: "mistral-large-latest".to_owned(),
+            messages: vec![ChatMessage {
+                role: "user".to_owned(),
+                content: prompt,
+            }],
+            safe_prompt: false, // Don't add safety prefix - we want raw language detection
+        };
+
+        let response = self.chat_completion(chat_request).await?;
+
+        // Clean up the response - take just the language name
+        let language = response
+            .output_text
+            .trim()
+            .trim_matches(|c| c == '"' || c == '\'' || c == '.' || c == ':')
+            .to_owned();
+
+        debug!("Detected language: {}", language);
+
+        Ok(LanguageDetectionResponse {
+            language,
+            confidence: 0.95, // We trust the model's detection
+        })
+    }
+
+    async fn translate_text(
+        &self,
+        request: TranslationRequest,
+    ) -> Result<TranslationResponse, MistralClientError> {
+        info!("Translating text to {}", request.target_language);
+
+        let prompt = format!(
+            "Translate the following text to {}. Return ONLY the translated text, nothing else. No explanations, no commentary, no formatting - just the direct translation.\n\nText: {}",
+            request.target_language, request.text
+        );
+
+        let chat_request = ChatCompletionRequest {
+            model: "mistral-large-latest".to_owned(),
+            messages: vec![ChatMessage {
+                role: "user".to_owned(),
+                content: prompt,
+            }],
+            safe_prompt: false, // Don't add safety moderation - we need raw translations for analysis
+        };
+
+        let response = self.chat_completion(chat_request).await?;
+
+        Ok(TranslationResponse {
+            translated_text: response.output_text.trim().to_owned(),
+        })
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -363,6 +437,37 @@ impl MistralClient for MockMistralClient {
     async fn list_models(&self) -> Result<ModelListResponse, MistralClientError> {
         Ok(ModelListResponse {
             models: self.models.clone(),
+        })
+    }
+
+    async fn detect_language(
+        &self,
+        request: LanguageDetectionRequest,
+    ) -> Result<LanguageDetectionResponse, MistralClientError> {
+        // Simple mock: detect English or Spanish based on text
+        let text_lower = request.text.to_ascii_lowercase();
+        if text_lower.contains("hola") || text_lower.contains("el") || text_lower.contains("la") {
+            Ok(LanguageDetectionResponse {
+                language: "Spanish".to_owned(),
+                confidence: 0.95,
+            })
+        } else {
+            Ok(LanguageDetectionResponse {
+                language: "English".to_owned(),
+                confidence: 0.95,
+            })
+        }
+    }
+
+    async fn translate_text(
+        &self,
+        request: TranslationRequest,
+    ) -> Result<TranslationResponse, MistralClientError> {
+        // Mock client cannot actually translate - return original text unchanged.
+        // For real multilingual support, use a real Mistral API key.
+        // The real HttpMistralClient uses the Mistral API which supports any language.
+        Ok(TranslationResponse {
+            translated_text: request.text,
         })
     }
 }

@@ -80,7 +80,10 @@ impl SemanticDetectionService {
             return Ok(SemanticScanResult::low_risk());
         }
 
-        let input_embedding = self.compute_embedding(&request.text).await?;
+        // Translate to English if needed for semantic analysis
+        let text_to_analyze = self.translate_if_needed(&request.text).await;
+
+        let input_embedding = self.compute_embedding(&text_to_analyze).await?;
         let cache = self.cached_templates.read().await;
 
         if cache.is_empty() {
@@ -148,6 +151,29 @@ impl SemanticDetectionService {
         } else {
             SemanticRiskLevel::Low
         }
+    }
+
+    async fn translate_if_needed(&self, text: &str) -> String {
+        // First detect language - only translate if NOT English
+        let Ok(lang_detection) = self.mistral_service.detect_language(text.to_owned()).await else {
+            return text.to_owned();
+        };
+
+        // Skip translation if already English (to avoid paraphrasing)
+        if lang_detection.language.to_lowercase() == "english" {
+            return text.to_owned();
+        }
+
+        // Translate non-English text to English for semantic analysis
+        let Ok(translation) = self
+            .mistral_service
+            .translate_text(text.to_owned(), "English")
+            .await
+        else {
+            return text.to_owned();
+        };
+
+        translation.translated_text
     }
 }
 
