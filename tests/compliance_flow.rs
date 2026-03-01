@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use prompt_sentinel::ComplianceEngine;
 use prompt_sentinel::ComplianceRequest;
+use prompt_sentinel::WorkflowStatus;
 use prompt_sentinel::modules::audit::logger::AuditLogger;
 use prompt_sentinel::modules::audit::storage::{AuditStorage, InMemoryAuditStorage};
 use prompt_sentinel::modules::bias_detection::service::BiasDetectionService;
@@ -9,9 +10,9 @@ use prompt_sentinel::modules::mistral_ai::client::MockMistralClient;
 use prompt_sentinel::modules::mistral_ai::dtos::{ChatCompletionResponse, ModerationResponse};
 use prompt_sentinel::modules::mistral_ai::service::MistralService;
 use prompt_sentinel::modules::prompt_firewall::service::PromptFirewallService;
-use prompt_sentinel::workflow::WorkflowStatus;
+use prompt_sentinel::modules::semantic_detection::service::SemanticDetectionService;
 
-fn build_engine(mock_client: MockMistralClient) -> (ComplianceEngine, Arc<InMemoryAuditStorage>) {
+async fn build_engine(mock_client: MockMistralClient) -> (ComplianceEngine, Arc<InMemoryAuditStorage>) {
     let storage = Arc::new(InMemoryAuditStorage::new());
     let audit_logger = AuditLogger::new(storage.clone());
     let mistral = MistralService::new(
@@ -20,8 +21,12 @@ fn build_engine(mock_client: MockMistralClient) -> (ComplianceEngine, Arc<InMemo
         Some("mistral-moderation-latest".to_owned()),
         "mistral-embed",
     );
+    let semantic = SemanticDetectionService::new(mistral.clone());
+    // Note: We don't initialize semantic service in tests (requires real embeddings API)
+    // The service gracefully handles uninitialized state by returning low risk
     let engine = ComplianceEngine::new(
         PromptFirewallService::default(),
+        semantic,
         BiasDetectionService::default(),
         mistral,
         audit_logger,
@@ -31,7 +36,7 @@ fn build_engine(mock_client: MockMistralClient) -> (ComplianceEngine, Arc<InMemo
 
 #[tokio::test]
 async fn benign_prompt_completes_with_audit_proof() {
-    let (engine, storage) = build_engine(MockMistralClient::default());
+    let (engine, storage) = build_engine(MockMistralClient::default()).await;
     let response = engine
         .process(ComplianceRequest {
             correlation_id: Some("corr-123".to_owned()),
@@ -44,6 +49,10 @@ async fn benign_prompt_completes_with_audit_proof() {
     assert!(response.generated_text.is_some());
     assert_eq!(response.correlation_id, "corr-123");
 
+    // Verify decision evidence is present
+    let evidence = response.decision_evidence.expect("decision evidence should be present");
+    assert_eq!(evidence.final_decision, "allow");
+
     let records = storage.all().expect("records available");
     assert_eq!(records.len(), 1);
     assert_eq!(records[0].correlation_id, "corr-123");
@@ -52,7 +61,7 @@ async fn benign_prompt_completes_with_audit_proof() {
 
 #[tokio::test]
 async fn prompt_injection_is_blocked_by_firewall() {
-    let (engine, storage) = build_engine(MockMistralClient::default());
+    let (engine, storage) = build_engine(MockMistralClient::default()).await;
     let response = engine
         .process(ComplianceRequest {
             correlation_id: None,
@@ -63,6 +72,11 @@ async fn prompt_injection_is_blocked_by_firewall() {
 
     assert_eq!(response.status, WorkflowStatus::BlockedByFirewall);
     assert!(response.generated_text.is_none());
+
+    // Verify decision evidence shows firewall block
+    let evidence = response.decision_evidence.expect("decision evidence should be present");
+    assert_eq!(evidence.final_decision, "block");
+    assert!(evidence.final_reason.contains("firewall"));
 
     let records = storage.all().expect("records available");
     assert_eq!(records.len(), 1);
@@ -88,7 +102,7 @@ async fn output_moderation_can_block_generation() {
         output_text: "Unsafe generated content".to_owned(),
     });
 
-    let (engine, _storage) = build_engine(mock_client);
+    let (engine, _storage) = build_engine(mock_client).await;
     let response = engine
         .process(ComplianceRequest {
             correlation_id: None,
@@ -105,4 +119,9 @@ async fn output_moderation_can_block_generation() {
             .expect("output moderation")
             .flagged
     );
+
+    // Verify decision evidence shows moderation block
+    let evidence = response.decision_evidence.expect("decision evidence should be present");
+    assert_eq!(evidence.final_decision, "block");
+    assert!(evidence.moderation_flagged);
 }
