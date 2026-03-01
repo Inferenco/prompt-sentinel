@@ -14,11 +14,19 @@ pub struct AuditEvent {
     pub sanitized_prompt: String,
     pub firewall_action: String,
     pub firewall_reasons: Vec<String>,
+    /// Semantic risk score (0.0 - 1.0)
+    pub semantic_risk_score: Option<f32>,
+    /// ID of matched attack template
+    pub semantic_template_id: Option<String>,
+    /// Category of matched attack template
+    pub semantic_category: Option<String>,
     pub bias_score: f32,
     pub bias_level: String,
     pub input_moderation_flagged: bool,
     pub output_moderation_flagged: bool,
     pub final_status: String,
+    /// Human-readable explanation of the decision
+    pub final_reason: String,
     pub model_used: Option<String>,
     pub output_preview: Option<String>,
 }
