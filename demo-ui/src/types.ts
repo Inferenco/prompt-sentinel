@@ -44,6 +44,28 @@ export interface AuditProof {
     chain_hash: string;
 }
 
+export interface StoredAuditRecord {
+    correlation_id: string;
+    timestamp: string;
+    payload: string;
+    proof: AuditProof;
+}
+
+export interface AuditTrailRequest {
+    limit?: number;
+    offset?: number;
+    start_time?: string;
+    end_time?: string;
+    correlation_id?: string;
+}
+
+export interface AuditTrailResponse {
+    records: StoredAuditRecord[];
+    total_count: number;
+    limit: number;
+    offset: number;
+}
+
 export type ObligationStatus = 'Met' | 'Partial' | 'Gap' | 'NotApplicable';
 
 export interface ObligationResult {
