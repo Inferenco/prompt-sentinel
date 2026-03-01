@@ -1,6 +1,6 @@
 import type { ComplianceResponse, HealthStatus } from './types';
 
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3200';
 
 export const api = {
     checkCompliance: async (prompt: string): Promise<ComplianceResponse> => {
@@ -22,11 +22,12 @@ export const api = {
     checkHealth: async (): Promise<HealthStatus> => {
         try {
             const response = await fetch(`${API_BASE_URL}/health`);
-            if (!response.ok) {
-                throw new Error('Health check failed');
+            if (response.ok) {
+                const text = await response.text();
+                return { status: text === 'OK' ? 'ok' : 'error', version: '0.1.0' };
             }
-            return response.json();
-        } catch (e) {
+            return { status: 'error', version: 'unknown' };
+        } catch {
             return { status: 'error', version: 'unknown' };
         }
     },

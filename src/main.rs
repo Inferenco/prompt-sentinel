@@ -5,21 +5,22 @@ use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize enhanced tracing with correlation support
-    init_tracing();
-    // Load environment variables from .env file
+    // Load environment variables from .env file FIRST
     dotenvy::dotenv().ok();
 
-    info!("🚀 Starting Prompt Sentinel Framework");
+    // Initialize enhanced tracing with correlation support
+    init_tracing();
+
+    info!("Starting Prompt Sentinel Framework");
 
     // Start metrics server on port 9090
-    info!("📊 Starting metrics server on 0.0.0.0:9090");
+    info!("Starting metrics server on 0.0.0.0:9090");
     TelemetryMetrics::start_metrics_server("0.0.0.0:9090")?;
 
-    // Use default configuration (port 3000, sled db at "prompt_sentinel_data")
+    // Use default configuration (reads from env vars)
     let config = FrameworkConfig::default();
 
-    // Initialize the framework (now async)
+    // Initialize the framework
     let server = config.initialize().await?;
 
     // Start the server
