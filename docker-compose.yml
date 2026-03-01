@@ -8,6 +8,8 @@ services:
       - RUST_LOG=${RUST_LOG}
       - SERVER_PORT=${SERVER_PORT}
       - SLED_DB_PATH=${SLED_DB_PATH}
+      - SEMANTIC_MEDIUM_THRESHOLD=${SEMANTIC_MEDIUM_THRESHOLD}
+      - SEMANTIC_HIGH_THRESHOLD=${SEMANTIC_HIGH_THRESHOLD}
     volumes:
       - sled-data:/data
     dns:
