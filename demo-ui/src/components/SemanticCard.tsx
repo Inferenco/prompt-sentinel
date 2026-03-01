@@ -6,13 +6,15 @@ interface SemanticCardProps {
 }
 
 export function SemanticCard({ result, loading }: SemanticCardProps) {
-  const getRiskColor = (level: string | undefined) => {
+  const getLevelColor = (level: string | undefined) => {
     switch (level) {
-      case 'High': return 'var(--danger)';
-      case 'Medium': return 'var(--warning)';
-      default: return 'var(--success)';
+      case 'High': return 'danger';
+      case 'Medium': return 'warning';
+      default: return 'success';
     }
   };
+
+  const levelColor = result ? getLevelColor(result.risk_level) : 'neutral';
 
   const getRiskIcon = (level: string | undefined) => {
     switch (level) {
@@ -23,17 +25,15 @@ export function SemanticCard({ result, loading }: SemanticCardProps) {
   };
 
   return (
-    <div className="card semantic-card">
+    <div className={`card semantic-card ${loading ? 'loading' : ''} ${levelColor}-border`}>
       <div className="card-header">
-        <h3>🧠 Semantic Detection</h3>
-        <span className="badge" style={{
-          backgroundColor: result ? getRiskColor(result.risk_level) : 'var(--bg-secondary)'
-        }}>
+        <h2>🧠 SEMANTIC DETECTION</h2>
+        <span className={`badge badge-${levelColor}`}>
           {loading ? '...' : result?.risk_level || 'N/A'}
         </span>
       </div>
 
-      <div className="card-content">
+      <div className="card-body">
         {loading ? (
           <div className="loading-placeholder">Analyzing semantic similarity...</div>
         ) : result ? (
@@ -62,8 +62,8 @@ export function SemanticCard({ result, loading }: SemanticCardProps) {
               <span className="icon">{getRiskIcon(result.risk_level)}</span>
               <span className="text">
                 {result.risk_level === 'High' ? 'Attack pattern detected' :
-                 result.risk_level === 'Medium' ? 'Elevated risk detected' :
-                 'No attack pattern detected'}
+                  result.risk_level === 'Medium' ? 'Elevated risk detected' :
+                    'No attack pattern detected'}
               </span>
             </div>
           </>

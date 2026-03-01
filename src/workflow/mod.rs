@@ -1,10 +1,13 @@
 use serde::{Deserialize, Serialize};
+use std::time::Instant;
 use thiserror::Error;
 
 use crate::modules::audit::logger::{AuditError, AuditEvent, AuditLogger};
 use crate::modules::audit::proof::AuditProof;
 use crate::modules::bias_detection::dtos::{BiasScanRequest, BiasScanResult};
 use crate::modules::bias_detection::service::BiasDetectionService;
+use crate::modules::eu_law_compliance::model::{AiRiskTier, EuComplianceResult};
+use crate::modules::eu_law_compliance::service::EuLawComplianceService;
 use crate::modules::mistral_ai::dtos::ModerationResponse;
 use crate::modules::mistral_ai::service::{MistralService, MistralServiceError};
 use crate::modules::prompt_firewall::dtos::{
@@ -27,6 +30,7 @@ pub enum WorkflowStatus {
     BlockedBySemantic,
     BlockedByInputModeration,
     BlockedByOutputModeration,
+    BlockedByEuCompliance,
     Sanitized,
 }
 
@@ -72,6 +76,8 @@ pub struct ComplianceResponse {
     pub audit_proof: AuditProof,
     /// Evidence explaining the decision
     pub decision_evidence: Option<DecisionEvidence>,
+    /// EU AI Act compliance result
+    pub eu_compliance: Option<EuComplianceResult>,
 }
 
 #[derive(Clone)]
@@ -81,6 +87,7 @@ pub struct ComplianceEngine {
     bias_service: BiasDetectionService,
     mistral_service: MistralService,
     audit_logger: AuditLogger,
+    eu_compliance_service: EuLawComplianceService,
 }
 
 impl ComplianceEngine {
@@ -97,6 +104,7 @@ impl ComplianceEngine {
             bias_service,
             mistral_service,
             audit_logger,
+            eu_compliance_service: EuLawComplianceService::default(),
         }
     }
 
@@ -174,7 +182,15 @@ impl ComplianceEngine {
             })
             .await;
 
-        // Step 2: Bias detection
+        // Step 2: EU AI Act compliance check
+        log_with_correlation(
+            &correlation_id,
+            tracing::Level::INFO,
+            "Performing EU AI Act compliance check",
+        );
+        let eu_compliance = self.eu_compliance_service.check_prompt(&original_prompt);
+
+        // Step 3: Bias detection
         let bias = self
             .bias_service
             .scan(BiasScanRequest {
@@ -184,6 +200,84 @@ impl ComplianceEngine {
             .await;
 
         // Policy combiner: Apply precedence rules
+        // 0. EU Compliance Unacceptable -> Block (Article 5 prohibited practices)
+        if matches!(eu_compliance.risk_tier, AiRiskTier::Unacceptable) {
+            let evidence = DecisionEvidence {
+                firewall_action: format!("{:?}", firewall.action),
+                firewall_matched_rules: firewall.matched_rules.clone(),
+                semantic_risk_score: None,
+                semantic_matched_template: None,
+                semantic_category: None,
+                moderation_flagged: false,
+                moderation_categories: vec![],
+                final_decision: "block".to_string(),
+                final_reason: format!(
+                    "Blocked by EU AI Act Article 5 (Prohibited Practices): {}",
+                    eu_compliance
+                        .findings
+                        .first()
+                        .map(|f| f.detail.as_str())
+                        .unwrap_or("Unacceptable risk tier detected")
+                ),
+            };
+
+            log_with_correlation(
+                &correlation_id,
+                tracing::Level::WARN,
+                &format!(
+                    "Prompt blocked by EU AI Act compliance: {:?}",
+                    eu_compliance.risk_tier
+                ),
+            );
+
+            let proof = self.audit_logger.log_event(AuditEvent {
+                correlation_id: correlation_id.clone(),
+                original_prompt: original_prompt.clone(),
+                sanitized_prompt: firewall.sanitized_prompt.clone(),
+                firewall_action: format!("{:?}", firewall.action),
+                firewall_reasons: firewall.reasons.clone(),
+                semantic_risk_score: None,
+                semantic_template_id: None,
+                semantic_category: None,
+                bias_score: bias.score,
+                bias_level: format!("{:?}", bias.level),
+                input_moderation_flagged: false,
+                output_moderation_flagged: false,
+                final_status: "blocked_by_eu_compliance".to_owned(),
+                final_reason: evidence.final_reason.clone(),
+                model_used: None,
+                output_preview: None,
+                full_output_text: None,
+                output_moderation_categories: vec![],
+                eu_risk_tier: Some(format!("{:?}", eu_compliance.risk_tier)),
+                eu_findings: Some(
+                    eu_compliance
+                        .findings
+                        .iter()
+                        .map(|f| f.detail.clone())
+                        .collect(),
+                ),
+                tokens_used: None,
+                response_latency_ms: None,
+                detected_language: Some(original_language.clone()),
+                was_translated: false,
+            })?;
+
+            return Ok(ComplianceResponse {
+                correlation_id,
+                status: WorkflowStatus::BlockedByEuCompliance,
+                firewall,
+                semantic: None,
+                bias,
+                input_moderation: None,
+                output_moderation: None,
+                generated_text: None,
+                audit_proof: proof,
+                decision_evidence: Some(evidence),
+                eu_compliance: Some(eu_compliance),
+            });
+        }
+
         // 1. Firewall Block -> Block
         if firewall.action == FirewallAction::Block {
             let evidence = DecisionEvidence {
@@ -224,6 +318,20 @@ impl ComplianceEngine {
                 final_reason: evidence.final_reason.clone(),
                 model_used: None,
                 output_preview: None,
+                full_output_text: None,
+                output_moderation_categories: vec![],
+                eu_risk_tier: Some(format!("{:?}", eu_compliance.risk_tier)),
+                eu_findings: Some(
+                    eu_compliance
+                        .findings
+                        .iter()
+                        .map(|f| f.detail.clone())
+                        .collect(),
+                ),
+                tokens_used: None,
+                response_latency_ms: None,
+                detected_language: Some(original_language.clone()),
+                was_translated: false,
             })?;
 
             return Ok(ComplianceResponse {
@@ -237,10 +345,11 @@ impl ComplianceEngine {
                 generated_text: None,
                 audit_proof: proof,
                 decision_evidence: Some(evidence),
+                eu_compliance: Some(eu_compliance),
             });
         }
 
-        // Step 3: Run semantic scan and input moderation concurrently.
+        // Step 4: Run semantic scan and input moderation concurrently.
         log_with_correlation(
             &correlation_id,
             tracing::Level::INFO,
@@ -300,6 +409,20 @@ impl ComplianceEngine {
                 final_reason: evidence.final_reason.clone(),
                 model_used: None,
                 output_preview: None,
+                full_output_text: None,
+                output_moderation_categories: vec![],
+                eu_risk_tier: Some(format!("{:?}", eu_compliance.risk_tier)),
+                eu_findings: Some(
+                    eu_compliance
+                        .findings
+                        .iter()
+                        .map(|f| f.detail.clone())
+                        .collect(),
+                ),
+                tokens_used: None,
+                response_latency_ms: None,
+                detected_language: Some(original_language.clone()),
+                was_translated: false,
             })?;
 
             return Ok(ComplianceResponse {
@@ -313,6 +436,7 @@ impl ComplianceEngine {
                 generated_text: None,
                 audit_proof: proof,
                 decision_evidence: Some(evidence),
+                eu_compliance: Some(eu_compliance),
             });
         }
 
@@ -360,6 +484,20 @@ impl ComplianceEngine {
                 final_reason: evidence.final_reason.clone(),
                 model_used: None,
                 output_preview: None,
+                full_output_text: None,
+                output_moderation_categories: input_moderation.categories.clone(),
+                eu_risk_tier: Some(format!("{:?}", eu_compliance.risk_tier)),
+                eu_findings: Some(
+                    eu_compliance
+                        .findings
+                        .iter()
+                        .map(|f| f.detail.clone())
+                        .collect(),
+                ),
+                tokens_used: None,
+                response_latency_ms: None,
+                detected_language: Some(original_language.clone()),
+                was_translated: false,
             })?;
 
             return Ok(ComplianceResponse {
@@ -373,6 +511,7 @@ impl ComplianceEngine {
                 generated_text: None,
                 audit_proof: proof,
                 decision_evidence: Some(evidence),
+                eu_compliance: Some(eu_compliance),
             });
         }
 
@@ -383,22 +522,26 @@ impl ComplianceEngine {
                 .map(|s| s.risk_level == SemanticRiskLevel::Medium)
                 .unwrap_or(false);
 
-        // Generate text
+        // Generate text with timing
         log_with_correlation(
             &correlation_id,
             tracing::Level::INFO,
             "Generating text with Mistral AI",
         );
+        let generation_start = Instant::now();
         let generation = self
             .mistral_service
             .generate_text(firewall.sanitized_prompt.clone(), true)
             .await?;
+        let generation_latency_ms = generation_start.elapsed().as_millis() as u64;
 
         // Clone the English output for moderation and audit logging
         let english_output = generation.output_text.clone();
-        
+        let tokens_used = generation.usage.as_ref().map(|u| u.total_tokens);
+
         // Translate generated text back to original language if needed
-        let generated_text = if original_language.to_lowercase() != "english" {
+        let was_translated = original_language.to_lowercase() != "english";
+        let generated_text = if was_translated {
             self.translate_to_original_language(&english_output, &original_language).await
         } else {
             english_output.clone()
@@ -458,6 +601,20 @@ impl ComplianceEngine {
                 final_reason: evidence.final_reason.clone(),
                 model_used: Some(generation.model),
                 output_preview: Some(english_output.chars().take(160).collect()),
+                full_output_text: Some(english_output.clone()),
+                output_moderation_categories: output_moderation.categories.clone(),
+                eu_risk_tier: Some(format!("{:?}", eu_compliance.risk_tier)),
+                eu_findings: Some(
+                    eu_compliance
+                        .findings
+                        .iter()
+                        .map(|f| f.detail.clone())
+                        .collect(),
+                ),
+                tokens_used,
+                response_latency_ms: Some(generation_latency_ms),
+                detected_language: Some(original_language.clone()),
+                was_translated,
             })?;
 
             return Ok(ComplianceResponse {
@@ -471,6 +628,7 @@ impl ComplianceEngine {
                 generated_text: None,
                 audit_proof: proof,
                 decision_evidence: Some(evidence),
+                eu_compliance: Some(eu_compliance),
             });
         }
 
@@ -537,6 +695,20 @@ impl ComplianceEngine {
             final_reason: evidence.final_reason.clone(),
             model_used: Some(generation.model.clone()),
             output_preview: Some(english_output.chars().take(160).collect()),
+            full_output_text: Some(english_output),
+            output_moderation_categories: vec![],
+            eu_risk_tier: Some(format!("{:?}", eu_compliance.risk_tier)),
+            eu_findings: Some(
+                eu_compliance
+                    .findings
+                    .iter()
+                    .map(|f| f.detail.clone())
+                    .collect(),
+            ),
+            tokens_used,
+            response_latency_ms: Some(generation_latency_ms),
+            detected_language: Some(original_language),
+            was_translated,
         })?;
 
         log_with_correlation(
@@ -559,6 +731,7 @@ impl ComplianceEngine {
             generated_text: Some(generated_text),
             audit_proof: proof,
             decision_evidence: Some(evidence),
+            eu_compliance: Some(eu_compliance),
         })
     }
 }
