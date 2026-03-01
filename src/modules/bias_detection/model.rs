@@ -15,4 +15,5 @@ pub enum BiasCategory {
     Religion,
     Disability,
     SocioEconomic,
+    HarmfulLanguage,
 }

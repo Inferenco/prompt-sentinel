@@ -1,0 +1,35 @@
+# Ignore files for Docker build
+
+# Git
+.git
+.gitignore
+
+# Node modules
+node_modules
+
+# Build artifacts
+target
+dist
+
+# Environment files
+.env
+.env.local
+
+# IDE files
+.vscode
+.idea
+
+# Logs and temporary files
+*.log
+tmp
+
+# Documentation
+*.md
+
+# Docker files
+Dockerfile
+.dockerignore
+
+# Local development files
+*.swp
+*.swo

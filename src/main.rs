@@ -10,9 +10,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load environment variables from .env file
     dotenvy::dotenv().ok();
 
-    // Initialize tracing
-    tracing_subscriber::fmt::init();
-
     info!("🚀 Starting Prompt Sentinel Framework");
 
     // Start metrics server on port 9090
