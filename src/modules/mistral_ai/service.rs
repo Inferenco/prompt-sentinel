@@ -6,9 +6,9 @@ use tracing::{debug, error, info, warn};
 use super::client::{MistralClient, MistralClientError};
 use super::dtos::{
     ChatCompletionRequest, ChatCompletionResponse, ChatMessage, EmbeddingRequest,
-    EmbeddingResponse, LanguageDetectionRequest, LanguageDetectionResponse, ModerationRequest,
-    ModerationResponse, ModelValidationResponse, ModelValidationStatus, TranslationRequest,
-    TranslationResponse,
+    EmbeddingResponse, LanguageDetectionRequest, LanguageDetectionResponse,
+    ModelValidationResponse, ModelValidationStatus, ModerationRequest, ModerationResponse,
+    TranslationRequest, TranslationResponse,
 };
 
 #[derive(Clone)]
@@ -142,9 +142,7 @@ impl MistralService {
         text: impl Into<String>,
     ) -> Result<LanguageDetectionResponse, MistralServiceError> {
         debug!("Detecting language of text");
-        let request = LanguageDetectionRequest {
-            text: text.into(),
-        };
+        let request = LanguageDetectionRequest { text: text.into() };
         self.client
             .detect_language(request)
             .await
@@ -170,41 +168,47 @@ impl MistralService {
 
     pub async fn health_check(&self) -> Result<(), MistralServiceError> {
         info!("Performing Mistral API health check");
-        
+
         // Test API connectivity by listing models
         let models = self.client.list_models().await?;
         if models.models.is_empty() {
             error!("Health check failed: no models available");
             return Err(MistralServiceError::Client(
-                MistralClientError::InvalidResponse("No models available".to_owned())
+                MistralClientError::InvalidResponse("No models available".to_owned()),
             ));
         }
-        
+
         // Validate all configured models
         self.validate_all_models().await?;
-        
+
         debug!("Health check passed: API and models are available");
         Ok(())
     }
 
     pub async fn validate_models_endpoint(&self) -> ModelValidationResponse {
         info!("Performing comprehensive model validation for /v1/models endpoint");
-        
-        let generation_status = self.validate_model_with_status(&self.generation_model).await;
+
+        let generation_status = self
+            .validate_model_with_status(&self.generation_model)
+            .await;
         let moderation_status = match &self.moderation_model {
             Some(model) => Some(self.validate_model_with_status(model).await),
             None => None,
         };
         let embedding_status = self.validate_model_with_status(&self.embedding_model).await;
-        
-        let overall_status = if generation_status.available 
-            && moderation_status.as_ref().map(|s| s.available).unwrap_or(true)
-            && embedding_status.available {
+
+        let overall_status = if generation_status.available
+            && moderation_status
+                .as_ref()
+                .map(|s| s.available)
+                .unwrap_or(true)
+            && embedding_status.available
+        {
             "all_models_available".to_string()
         } else {
             "some_models_unavailable".to_string()
         };
-        
+
         ModelValidationResponse {
             generation_model: generation_status,
             moderation_model: moderation_status,

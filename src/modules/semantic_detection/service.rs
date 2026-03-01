@@ -1,14 +1,14 @@
 use std::path::Path;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use thiserror::Error;
+use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 
-use crate::modules::mistral_ai::service::{MistralService, MistralServiceError};
 use super::dtos::{
     AttackTemplate, AttackTemplateBank, CachedTemplate, SemanticRiskLevel, SemanticScanRequest,
     SemanticScanResult,
 };
+use crate::modules::mistral_ai::service::{MistralService, MistralServiceError};
 
 #[derive(Clone)]
 pub struct SemanticDetectionService {
@@ -22,7 +22,11 @@ pub struct SemanticDetectionService {
 }
 
 impl SemanticDetectionService {
-    pub fn new(mistral_service: MistralService, medium_threshold: f32, high_threshold: f32) -> Self {
+    pub fn new(
+        mistral_service: MistralService,
+        medium_threshold: f32,
+        high_threshold: f32,
+    ) -> Self {
         Self {
             mistral_service,
             cached_templates: Arc::new(RwLock::new(Vec::new())),
@@ -54,7 +58,10 @@ impl SemanticDetectionService {
         let mut init = self.initialized.write().await;
         *init = true;
 
-        info!("Semantic detection service initialized with {} templates", cache.len());
+        info!(
+            "Semantic detection service initialized with {} templates",
+            cache.len()
+        );
         Ok(())
     }
 
@@ -64,7 +71,10 @@ impl SemanticDetectionService {
     }
 
     /// Scan text for semantic similarity to attack templates
-    pub async fn scan(&self, request: SemanticScanRequest) -> Result<SemanticScanResult, SemanticDetectionError> {
+    pub async fn scan(
+        &self,
+        request: SemanticScanRequest,
+    ) -> Result<SemanticScanResult, SemanticDetectionError> {
         if !self.is_initialized().await {
             warn!("Semantic detection service not initialized, returning low risk");
             return Ok(SemanticScanResult::low_risk());
@@ -145,10 +155,7 @@ impl SemanticDetectionService {
 
     async fn translate_if_needed(&self, text: &str) -> String {
         // First detect language - only translate if NOT English
-        let Ok(lang_detection) = self.mistral_service
-            .detect_language(text.to_owned())
-            .await
-        else {
+        let Ok(lang_detection) = self.mistral_service.detect_language(text.to_owned()).await else {
             return text.to_owned();
         };
 
@@ -158,7 +165,8 @@ impl SemanticDetectionService {
         }
 
         // Translate non-English text to English for semantic analysis
-        let Ok(translation) = self.mistral_service
+        let Ok(translation) = self
+            .mistral_service
             .translate_text(text.to_owned(), "English")
             .await
         else {

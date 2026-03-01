@@ -6,8 +6,10 @@ pub async fn handle_bias_scan(
     text: impl Into<String>,
     threshold: Option<f32>,
 ) -> BiasScanResult {
-    service.scan(BiasScanRequest {
-        text: text.into(),
-        threshold,
-    }).await
+    service
+        .scan(BiasScanRequest {
+            text: text.into(),
+            threshold,
+        })
+        .await
 }

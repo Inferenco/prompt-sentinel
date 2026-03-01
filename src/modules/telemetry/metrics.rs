@@ -1,9 +1,9 @@
 use std::time::Instant;
 
 use metrics::{counter, gauge, histogram};
-use std::sync::atomic::{AtomicU64, Ordering};
 use metrics_exporter_prometheus::PrometheusBuilder;
 use once_cell::sync::Lazy;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 pub struct TelemetryMetrics {
     request_counter: AtomicU64,
@@ -54,10 +54,10 @@ impl TelemetryMetrics {
         let builder = PrometheusBuilder::new();
         let socket_addr: std::net::SocketAddr = addr.parse()?;
         let builder = builder.with_http_listener(socket_addr);
-        
+
         // Install the recorder
         builder.install()?;
-        
+
         Ok(())
     }
 }
@@ -66,11 +66,17 @@ pub struct RequestTimer {
     start: Instant,
 }
 
-impl RequestTimer {
-    pub fn new() -> Self {
+impl Default for RequestTimer {
+    fn default() -> Self {
         Self {
             start: Instant::now(),
         }
+    }
+}
+
+impl RequestTimer {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn elapsed_seconds(&self) -> f64 {

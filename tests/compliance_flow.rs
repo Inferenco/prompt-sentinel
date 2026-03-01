@@ -12,7 +12,9 @@ use prompt_sentinel::modules::mistral_ai::service::MistralService;
 use prompt_sentinel::modules::prompt_firewall::service::PromptFirewallService;
 use prompt_sentinel::modules::semantic_detection::service::SemanticDetectionService;
 
-async fn build_engine(mock_client: MockMistralClient) -> (ComplianceEngine, Arc<InMemoryAuditStorage>) {
+async fn build_engine(
+    mock_client: MockMistralClient,
+) -> (ComplianceEngine, Arc<InMemoryAuditStorage>) {
     let storage = Arc::new(InMemoryAuditStorage::new());
     let audit_logger = AuditLogger::new(storage.clone());
     let mistral = MistralService::new(
@@ -50,7 +52,9 @@ async fn benign_prompt_completes_with_audit_proof() {
     assert_eq!(response.correlation_id, "corr-123");
 
     // Verify decision evidence is present
-    let evidence = response.decision_evidence.expect("decision evidence should be present");
+    let evidence = response
+        .decision_evidence
+        .expect("decision evidence should be present");
     assert_eq!(evidence.final_decision, "allow");
 
     let records = storage.all().expect("records available");
@@ -74,7 +78,9 @@ async fn prompt_injection_is_blocked_by_firewall() {
     assert!(response.generated_text.is_none());
 
     // Verify decision evidence shows firewall block
-    let evidence = response.decision_evidence.expect("decision evidence should be present");
+    let evidence = response
+        .decision_evidence
+        .expect("decision evidence should be present");
     assert_eq!(evidence.final_decision, "block");
     assert!(evidence.final_reason.contains("firewall"));
 
@@ -121,7 +127,9 @@ async fn output_moderation_can_block_generation() {
     );
 
     // Verify decision evidence shows moderation block
-    let evidence = response.decision_evidence.expect("decision evidence should be present");
+    let evidence = response
+        .decision_evidence
+        .expect("decision evidence should be present");
     assert_eq!(evidence.final_decision, "block");
     assert!(evidence.moderation_flagged);
 }

@@ -1203,20 +1203,24 @@ mod tests {
     #[tokio::test]
     async fn returns_low_for_neutral_text() {
         let service = BiasDetectionService::default();
-        let result = service.scan(BiasScanRequest {
-            text: "Summarize the quarterly financial report".to_owned(),
-            threshold: None,
-        }).await;
+        let result = service
+            .scan(BiasScanRequest {
+                text: "Summarize the quarterly financial report".to_owned(),
+                threshold: None,
+            })
+            .await;
         assert_eq!(result.level, BiasLevel::Low);
     }
 
     #[tokio::test]
     async fn returns_high_for_multiple_categories() {
         let service = BiasDetectionService::default();
-        let result = service.scan(BiasScanRequest {
-            text: "Women are bad at math and poor people are lazy".to_owned(),
-            threshold: None,
-        }).await;
+        let result = service
+            .scan(BiasScanRequest {
+                text: "Women are bad at math and poor people are lazy".to_owned(),
+                threshold: None,
+            })
+            .await;
         assert_eq!(result.level, BiasLevel::High);
         assert!(result.score > 0.5);
     }
@@ -1224,14 +1228,18 @@ mod tests {
     #[tokio::test]
     async fn nan_threshold_falls_back_to_default_threshold() {
         let service = BiasDetectionService::default();
-        let default_result = service.scan(BiasScanRequest {
-            text: "Women are bad at math".to_owned(),
-            threshold: None,
-        }).await;
-        let nan_result = service.scan(BiasScanRequest {
-            text: "Women are bad at math".to_owned(),
-            threshold: Some(f32::NAN),
-        }).await;
+        let default_result = service
+            .scan(BiasScanRequest {
+                text: "Women are bad at math".to_owned(),
+                threshold: None,
+            })
+            .await;
+        let nan_result = service
+            .scan(BiasScanRequest {
+                text: "Women are bad at math".to_owned(),
+                threshold: Some(f32::NAN),
+            })
+            .await;
         assert_eq!(default_result.level, nan_result.level);
     }
 }

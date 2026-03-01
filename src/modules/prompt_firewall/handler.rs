@@ -6,8 +6,10 @@ pub async fn handle_prompt(
     prompt: impl Into<String>,
     correlation_id: Option<String>,
 ) -> PromptFirewallResult {
-    service.inspect(PromptFirewallRequest {
-        prompt: prompt.into(),
-        correlation_id,
-    }).await
+    service
+        .inspect(PromptFirewallRequest {
+            prompt: prompt.into(),
+            correlation_id,
+        })
+        .await
 }

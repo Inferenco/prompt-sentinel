@@ -301,7 +301,8 @@ impl MistralClient for HttpMistralClient {
         let response = self.chat_completion(chat_request).await?;
 
         // Clean up the response - take just the language name
-        let language = response.output_text
+        let language = response
+            .output_text
             .trim()
             .trim_matches(|c| c == '"' || c == '\'' || c == '.' || c == ':')
             .to_owned();
@@ -337,7 +338,7 @@ impl MistralClient for HttpMistralClient {
         let response = self.chat_completion(chat_request).await?;
 
         Ok(TranslationResponse {
-            translated_text: response.output_text.trim().to_owned()
+            translated_text: response.output_text.trim().to_owned(),
         })
     }
 }
