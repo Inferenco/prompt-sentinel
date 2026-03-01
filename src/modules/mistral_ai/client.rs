@@ -285,7 +285,7 @@ impl MistralClient for HttpMistralClient {
         info!("Detecting language for text");
 
         let prompt = format!(
-            "Detect the language of the following text and respond with JSON containing 'language' and 'confidence' fields:\n\nText: {}",
+            "What language is this text written in? Reply with ONLY the language name (e.g., 'English', 'German', 'Spanish', 'French', 'Chinese', etc.), nothing else.\n\nText: {}",
             request.text
         );
 
@@ -295,26 +295,23 @@ impl MistralClient for HttpMistralClient {
                 role: "user".to_owned(),
                 content: prompt,
             }],
-            safe_prompt: true,
+            safe_prompt: false, // Don't add safety prefix - we want raw language detection
         };
 
         let response = self.chat_completion(chat_request).await?;
-        
-        // Parse the JSON response
-        let json: Value = serde_json::from_str(&response.output_text)
-            .map_err(|e| MistralClientError::InvalidResponse(format!("Failed to parse language detection response: {}", e)))?;
 
-        let language = json.get("language")
-            .and_then(Value::as_str)
-            .unwrap_or("unknown")
+        // Clean up the response - take just the language name
+        let language = response.output_text
+            .trim()
+            .trim_matches(|c| c == '"' || c == '\'' || c == '.' || c == ':')
             .to_owned();
-        
-        let confidence = json.get("confidence")
-            .and_then(Value::as_f64)
-            .map(|v| v as f32)
-            .unwrap_or(0.0);
 
-        Ok(LanguageDetectionResponse { language, confidence })
+        debug!("Detected language: {}", language);
+
+        Ok(LanguageDetectionResponse {
+            language,
+            confidence: 0.95, // We trust the model's detection
+        })
     }
 
     async fn translate_text(

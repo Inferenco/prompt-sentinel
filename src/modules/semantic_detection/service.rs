@@ -144,14 +144,27 @@ impl SemanticDetectionService {
     }
 
     async fn translate_if_needed(&self, text: &str) -> String {
-        // Always translate to English for consistent semantic analysis
+        // First detect language - only translate if NOT English
+        let Ok(lang_detection) = self.mistral_service
+            .detect_language(text.to_owned())
+            .await
+        else {
+            return text.to_owned();
+        };
+
+        // Skip translation if already English (to avoid paraphrasing)
+        if lang_detection.language.to_lowercase() == "english" {
+            return text.to_owned();
+        }
+
+        // Translate non-English text to English for semantic analysis
         let Ok(translation) = self.mistral_service
             .translate_text(text.to_owned(), "English")
             .await
         else {
             return text.to_owned();
         };
-        
+
         translation.translated_text
     }
 }

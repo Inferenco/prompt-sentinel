@@ -36,7 +36,22 @@ impl PromptFirewallService {
             return text.to_owned();
         };
 
-        // Always translate to English for consistent analysis when Mistral service is available
+        // First detect language - only translate if NOT English
+        let Ok(lang_detection) = mistral_service
+            .detect_language(crate::modules::mistral_ai::dtos::LanguageDetectionRequest {
+                text: text.to_owned(),
+            })
+            .await
+        else {
+            return text.to_owned();
+        };
+
+        // Skip translation if already English (to avoid paraphrasing)
+        if lang_detection.language.to_lowercase() == "english" {
+            return text.to_owned();
+        }
+
+        // Translate non-English text to English
         let Ok(translation) = mistral_service
             .translate_text(crate::modules::mistral_ai::dtos::TranslationRequest {
                 text: text.to_owned(),
@@ -46,7 +61,7 @@ impl PromptFirewallService {
         else {
             return text.to_owned();
         };
-        
+
         translation.translated_text
     }
 }
