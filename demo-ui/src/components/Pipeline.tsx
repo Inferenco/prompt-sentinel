@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type PipelineStatus = 'Idle' | 'Pending' | 'Completed' | 'Sanitized' | 'BlockedByFirewall' | 'BlockedBySemantic' | 'BlockedByInputModeration' | 'BlockedByOutputModeration';
+export type PipelineStatus = 'Idle' | 'Pending' | 'Completed' | 'Sanitized' | 'BlockedByFirewall' | 'BlockedBySemantic' | 'BlockedByInputModeration' | 'BlockedByOutputModeration' | 'BlockedByEuCompliance';
 
 interface PipelineProps {
     status: PipelineStatus;
@@ -10,6 +10,7 @@ interface PipelineProps {
 
 const STEPS = [
     { name: 'Firewall', icon: '🛡️' },
+    { name: 'EU Compliance', icon: '🇪🇺' },
     { name: 'Semantic', icon: '🧠' },
     { name: 'Bias', icon: '⚖️' },
     { name: 'Input Mod', icon: '📥' },
@@ -42,6 +43,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ status, activeStep, timeMs }
             case 'Completed': return 'Allowed';
             case 'Sanitized': return 'Caution & Allowed';
             case 'BlockedByFirewall': return 'Blocked by Firewall';
+            case 'BlockedByEuCompliance': return 'Blocked by EU AI Act (Article 5)';
             case 'BlockedBySemantic': return 'Blocked by Semantic Detection';
             case 'BlockedByInputModeration': return 'Blocked by Input Moderation';
             case 'BlockedByOutputModeration': return 'Blocked by Output Moderation';

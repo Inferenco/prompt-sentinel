@@ -44,9 +44,28 @@ export interface AuditProof {
     chain_hash: string;
 }
 
+export type ObligationStatus = 'Met' | 'Partial' | 'Gap' | 'NotApplicable';
+
+export interface ObligationResult {
+    id: string;
+    name: string;
+    legal_basis: string;
+    status: ObligationStatus;
+    detail: string | null;
+    applicable_from: string | null;
+}
+
+export interface EuComplianceResult {
+    risk_tier: 'Minimal' | 'Limited' | 'High' | 'Unacceptable';
+    compliant: boolean;
+    obligations: ObligationResult[];
+    findings: { code: string; detail: string }[];
+    scope_disclaimer: string;
+}
+
 export interface ComplianceResponse {
     correlation_id: string;
-    status: 'Completed' | 'BlockedByFirewall' | 'BlockedBySemantic' | 'BlockedByInputModeration' | 'BlockedByOutputModeration' | 'Sanitized';
+    status: 'Completed' | 'BlockedByFirewall' | 'BlockedBySemantic' | 'BlockedByInputModeration' | 'BlockedByOutputModeration' | 'BlockedByEuCompliance' | 'Sanitized';
     firewall: FirewallResult;
     semantic: SemanticResult | null;
     bias: BiasResult;
@@ -55,6 +74,7 @@ export interface ComplianceResponse {
     generated_text: string | null;
     audit_proof: AuditProof;
     decision_evidence: DecisionEvidence | null;
+    eu_compliance: EuComplianceResult | null;
 }
 
 export interface HealthStatus {

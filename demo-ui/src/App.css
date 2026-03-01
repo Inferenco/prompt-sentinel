@@ -34,6 +34,7 @@ h1, h2, h3 { margin: 0; }
 .top-row { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
 .middle-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
 .bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.compliance-row { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
 .response-column, .evidence-column { display: flex; flex-direction: column; gap: 1rem; }
 .flex-column { display: flex; flex-direction: column; gap: 1.5rem; }
 @media (max-width: 1024px) {
@@ -64,6 +65,12 @@ h1, h2, h3 { margin: 0; }
 .example-btn.safe:hover:not(:disabled) { border-color: var(--success); }
 .example-btn.injection:hover:not(:disabled) { border-color: var(--danger); }
 .example-btn.biased:hover:not(:disabled) { border-color: var(--warning); }
+.example-btn.prohibited { border-color: rgba(220, 38, 38, 0.5); }
+.example-btn.prohibited:hover:not(:disabled) { border-color: #dc2626; background: rgba(220, 38, 38, 0.1); }
+.example-btn.high-risk { border-color: rgba(245, 158, 11, 0.5); }
+.example-btn.high-risk:hover:not(:disabled) { border-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+.example-btn.limited-risk { border-color: rgba(59, 130, 246, 0.5); }
+.example-btn.limited-risk:hover:not(:disabled) { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
 
 /* Pipeline */
 .pipeline-steps { display: flex; flex-direction: column; gap: 1rem; }
