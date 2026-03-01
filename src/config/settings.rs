@@ -23,6 +23,8 @@ pub struct AppSettings {
     pub semantic_medium_threshold: f32,
     /// Threshold for semantic Medium/High boundary (default: 0.80)
     pub semantic_high_threshold: f32,
+    /// Extra buffer added to semantic thresholds to reduce borderline false positives
+    pub semantic_decision_margin: f32,
 }
 
 impl AppSettings {
@@ -32,6 +34,7 @@ impl AppSettings {
         let max_input_length = parse_env_usize("MAX_INPUT_LENGTH", 4096)?;
         let semantic_medium_threshold = parse_env_f32("SEMANTIC_MEDIUM_THRESHOLD", 0.70)?;
         let semantic_high_threshold = parse_env_f32("SEMANTIC_HIGH_THRESHOLD", 0.80)?;
+        let semantic_decision_margin = parse_env_f32("SEMANTIC_DECISION_MARGIN", 0.02)?;
 
         Ok(Self {
             server_port,
@@ -50,6 +53,7 @@ impl AppSettings {
             max_input_length,
             semantic_medium_threshold,
             semantic_high_threshold,
+            semantic_decision_margin,
         })
     }
 }

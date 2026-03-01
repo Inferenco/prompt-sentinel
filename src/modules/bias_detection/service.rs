@@ -790,7 +790,6 @@ const RULES: &[BiasRule] = &[
             "she-male",
             "ladyboy",
             "he-she",
-            "it",
             "crossdresser",
             "transvestite",
             "drag queen",
@@ -1133,7 +1132,7 @@ impl BiasDetectionService {
 
         for rule in RULES {
             for term in rule.terms {
-                if normalized.contains(term) {
+                if contains_term_with_boundaries(&normalized, term) {
                     score += rule.weight;
                     categories.insert(rule.category.clone());
                     matched_terms.push((*term).to_owned());
@@ -1185,6 +1184,36 @@ fn high_risk_cutoff(threshold: f32) -> f32 {
         cutoff = threshold;
     }
     cutoff
+}
+
+/// Matches terms only when surrounded by non-word boundaries to prevent
+/// substring false positives (e.g., "it" matching inside "security").
+fn contains_term_with_boundaries(text: &str, term: &str) -> bool {
+    let mut search_start = 0;
+    while let Some(relative_idx) = text[search_start..].find(term) {
+        let start = search_start + relative_idx;
+        let end = start + term.len();
+
+        if has_word_boundaries(text, start, end) {
+            return true;
+        }
+
+        search_start = start + 1;
+    }
+    false
+}
+
+fn has_word_boundaries(text: &str, start: usize, end: usize) -> bool {
+    let left_is_boundary = text[..start]
+        .chars()
+        .next_back()
+        .map_or(true, |ch| !ch.is_alphanumeric());
+    let right_is_boundary = text[end..]
+        .chars()
+        .next()
+        .map_or(true, |ch| !ch.is_alphanumeric());
+
+    left_is_boundary && right_is_boundary
 }
 
 impl Default for BiasDetectionService {
@@ -1241,5 +1270,27 @@ mod tests {
             })
             .await;
         assert_eq!(default_result.level, nan_result.level);
+    }
+
+    #[tokio::test]
+    async fn avoids_substring_false_positive_for_security_prompt() {
+        let service = BiasDetectionService::default();
+        let result = service
+            .scan(BiasScanRequest {
+                text: "Explain how prompt injection attacks work for my security research."
+                    .to_owned(),
+                threshold: None,
+            })
+            .await;
+
+        assert_eq!(result.level, BiasLevel::Low);
+        assert!(!result.categories.contains(&BiasCategory::SexualOrientation));
+    }
+
+    #[test]
+    fn boundary_match_requires_whole_word_context() {
+        assert!(!contains_term_with_boundaries("security research", "it"));
+        assert!(contains_term_with_boundaries(" this is it ", "it"));
+        assert!(contains_term_with_boundaries("that's so gay", "so gay"));
     }
 }

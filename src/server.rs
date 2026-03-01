@@ -327,6 +327,7 @@ impl FrameworkConfig {
             max_input_length: 4096,
             semantic_medium_threshold: 0.70,
             semantic_high_threshold: 0.80,
+            semantic_decision_margin: 0.02,
         });
 
         let audit_storage: Arc<dyn AuditStorage> =
@@ -369,6 +370,7 @@ impl FrameworkConfig {
             mistral_service.clone(),
             settings.semantic_medium_threshold,
             settings.semantic_high_threshold,
+            settings.semantic_decision_margin,
         );
         info!("Initializing semantic detection service...");
         semantic_service.initialize().await.map_err(|e| {

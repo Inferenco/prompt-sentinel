@@ -19,6 +19,8 @@ pub struct SemanticDetectionService {
     medium_threshold: f32,
     /// Threshold for Medium/High boundary
     high_threshold: f32,
+    /// Extra buffer added to semantic thresholds to reduce borderline false positives
+    decision_margin: f32,
 }
 
 impl SemanticDetectionService {
@@ -26,6 +28,7 @@ impl SemanticDetectionService {
         mistral_service: MistralService,
         medium_threshold: f32,
         high_threshold: f32,
+        decision_margin: f32,
     ) -> Self {
         Self {
             mistral_service,
@@ -33,6 +36,7 @@ impl SemanticDetectionService {
             initialized: Arc::new(RwLock::new(false)),
             medium_threshold,
             high_threshold,
+            decision_margin: normalize_margin(decision_margin),
         }
     }
 
@@ -144,13 +148,12 @@ impl SemanticDetectionService {
 
     /// Classify risk level based on similarity score using configured thresholds
     fn classify_risk(&self, similarity: f32) -> SemanticRiskLevel {
-        if similarity > self.high_threshold {
-            SemanticRiskLevel::High
-        } else if similarity > self.medium_threshold {
-            SemanticRiskLevel::Medium
-        } else {
-            SemanticRiskLevel::Low
-        }
+        classify_risk_with_margin(
+            similarity,
+            self.medium_threshold,
+            self.high_threshold,
+            self.decision_margin,
+        )
     }
 
     async fn translate_if_needed(&self, text: &str) -> String {
@@ -194,6 +197,33 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     dot_product / (norm_a * norm_b)
 }
 
+fn classify_risk_with_margin(
+    similarity: f32,
+    medium_threshold: f32,
+    high_threshold: f32,
+    margin: f32,
+) -> SemanticRiskLevel {
+    let margin = normalize_margin(margin);
+    let medium_cutoff = (medium_threshold + margin).clamp(0.0, 1.0);
+    let high_base = high_threshold.max(medium_threshold);
+    let high_cutoff = (high_base + margin).clamp(medium_cutoff, 1.0);
+
+    if similarity >= high_cutoff {
+        SemanticRiskLevel::High
+    } else if similarity >= medium_cutoff {
+        SemanticRiskLevel::Medium
+    } else {
+        SemanticRiskLevel::Low
+    }
+}
+
+fn normalize_margin(margin: f32) -> f32 {
+    if !margin.is_finite() {
+        return 0.0;
+    }
+    margin.clamp(0.0, 0.20)
+}
+
 #[derive(Debug, Error)]
 pub enum SemanticDetectionError {
     #[error("Attack template bank not found: {0}")]
@@ -232,5 +262,28 @@ mod tests {
         let b = vec![-1.0, 0.0];
         let sim = cosine_similarity(&a, &b);
         assert!((sim - (-1.0)).abs() < 0.0001);
+    }
+
+    #[test]
+    fn classify_risk_adds_margin_to_medium_cutoff() {
+        let low = classify_risk_with_margin(0.706, 0.70, 0.80, 0.02);
+        let medium = classify_risk_with_margin(0.72, 0.70, 0.80, 0.02);
+        assert_eq!(low, SemanticRiskLevel::Low);
+        assert_eq!(medium, SemanticRiskLevel::Medium);
+    }
+
+    #[test]
+    fn classify_risk_adds_margin_to_high_cutoff() {
+        let medium = classify_risk_with_margin(0.819, 0.70, 0.80, 0.02);
+        let high = classify_risk_with_margin(0.82, 0.70, 0.80, 0.02);
+        assert_eq!(medium, SemanticRiskLevel::Medium);
+        assert_eq!(high, SemanticRiskLevel::High);
+    }
+
+    #[test]
+    fn normalize_margin_clamps_invalid_and_negative_values() {
+        assert_eq!(normalize_margin(f32::NAN), 0.0);
+        assert_eq!(normalize_margin(-0.1), 0.0);
+        assert_eq!(normalize_margin(0.5), 0.20);
     }
 }
