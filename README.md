@@ -35,7 +35,7 @@ cargo run --release
 
 ### Prerequisites
 
-- Rust 1.70 or higher
+- Rust 1.85 or higher
 - Cargo package manager
 - Mistral API key (for full functionality)
 
@@ -348,6 +348,101 @@ cargo bench
 - Immutable audit trail
 - Cryptographic proof generation
 - Sled database storage
+
+## Demo UI
+
+The framework includes a React-based demo UI that provides an interactive interface for testing the compliance framework.
+
+### Running the Demo
+
+#### Prerequisites
+- Node.js 20+
+- npm or yarn
+
+#### Installation
+
+```bash
+# Navigate to the demo-ui directory
+cd demo-ui
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+```
+
+The demo UI will be available at `http://localhost:5175` (or the port specified in `FRONTEND_PORT`).
+
+#### Configuration
+
+The demo UI can be configured using environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `FRONTEND_PORT` | Demo UI port | `5175` |
+| `VITE_API_BASE_URL` | Backend API URL | `http://localhost:3000` |
+
+Create a `.env` file in the `demo-ui` directory:
+
+```env
+# Demo UI configuration
+FRONTEND_PORT=5175
+VITE_API_BASE_URL=http://localhost:3000
+```
+
+#### Docker Deployment
+
+To run the demo UI with Docker:
+
+```bash
+# Build and start both backend and frontend
+docker compose up -d
+
+# Access the demo UI
+open http://localhost:5175
+```
+
+The `docker-compose.yml` file includes configuration for both services:
+
+```yaml
+services:
+  prompt-sentinel:
+    build: .
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    environment:
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - RUST_LOG=${RUST_LOG}
+      - SERVER_PORT=${SERVER_PORT}
+      - SLED_DB_PATH=${SLED_DB_PATH}
+    volumes:
+      - sled-data:/data
+    restart: unless-stopped
+
+  demo-ui:
+    build:
+      context: ./demo-ui
+      dockerfile: Dockerfile
+    ports:
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+    environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+    depends_on:
+      - prompt-sentinel
+    restart: unless-stopped
+
+volumes:
+  sled-data:
+```
+
+### Demo Features
+
+The demo UI provides:
+- **Interactive prompt testing**: Test prompts and see real-time compliance results
+- **Compliance visualization**: Visual representation of firewall, bias, and moderation results
+- **Audit trail**: View compliance history and audit records
+- **Configuration management**: Adjust framework settings through the UI
 
 ## Deployment
 

@@ -2,19 +2,225 @@
 
 ## Table of Contents
 
-1. [Framework Overview](#framework-overview)
-2. [Architecture](#architecture)
-3. [Module Documentation](#module-documentation)
+1. [Get Started](#get-started)
+   - [Prerequisites](#prerequisites)
+   - [Installation](#installation)
+   - [Quick Start](#quick-start)
+   - [Docker Setup](#docker-setup)
+2. [Framework Overview](#framework-overview)
+3. [Architecture](#architecture)
+4. [Configuration](#configuration)
+   - [Configuration Files](#configuration-files)
+   - [FrameworkConfig](#frameworkconfig)
+   - [Environment Variables](#environment-variables)
+5. [Module Documentation](#module-documentation)
    - [Prompt Firewall Module](#prompt-firewall-module)
    - [Bias Detection Module](#bias-detection-module)
    - [EU Law Compliance Module](#eu-law-compliance-module)
    - [Mistral Expert Module](#mistral-expert-module)
    - [Audit Module](#audit-module)
-4. [Configuration](#configuration)
-5. [API Documentation](#api-documentation)
-6. [Usage Examples](#usage-examples)
-7. [Setup and Installation](#setup-and-installation)
+6. [API Documentation](#api-documentation)
+7. [Usage Examples](#usage-examples)
 8. [Running Tests](#running-tests)
+
+## Get Started
+
+Welcome to Prompt Sentinel! This section will help you quickly set up and run the framework.
+
+### Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Rust 1.85+** - [Install Rust](https://www.rust-lang.org/tools/install)
+- **Cargo** - Comes with Rust installation
+- **Mistral API key** (optional, required for full Mistral AI functionality)
+
+### Installation
+
+#### 1. Clone the Repository
+
+```bash
+git clone https://github.com/Inferenco/prompt_sentinel.git
+cd prompt_sentinel
+```
+
+#### 2. Build the Project
+
+```bash
+# Build in release mode for production
+cargo build --release
+
+# Or build in development mode for faster iteration
+cargo build
+```
+
+#### 3. Set Up Environment Variables
+
+Create a `.env` file in the project root:
+
+```bash
+# Copy the example environment file
+touch .env
+```
+
+Add the following configuration (adjust as needed):
+
+```env
+# Mistral AI API key (use "mock" for testing without real API)
+MISTRAL_API_KEY="your-api-key-or-mock"
+
+# Logging level (info, debug, trace)
+RUST_LOG="info"
+
+# Server configuration
+SERVER_PORT=3000
+
+# Database configuration
+SLED_DB_PATH="prompt_sentinel_data"
+
+# Frontend configuration
+FRONTEND_PORT=5175
+VITE_API_BASE_URL="http://localhost:3000"
+```
+
+#### 4. Run the Server
+
+```bash
+# Start the server
+cargo run --release
+
+# Or with environment variables explicitly set
+MISTRAL_API_KEY="your-key" RUST_LOG="info" cargo run --release
+```
+
+The server will start on `http://localhost:3000` by default.
+
+### Quick Start
+
+Here's a simple example to test the framework:
+
+```bash
+# Test the health endpoint
+curl http://localhost:3000/health
+
+# Test a compliance check
+curl -X POST http://localhost:3000/api/compliance/check \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Explain the benefits of Rust programming"}' \
+  | jq .
+```
+
+### Docker Setup
+
+For production deployment, we recommend using Docker.
+
+#### 1. Build the Docker Images
+
+```bash
+# Build both backend and frontend
+docker compose build
+```
+
+#### 2. Run the Services
+
+```bash
+# Start the services
+docker compose up -d
+```
+
+This will start:
+- **Backend service** on port 3000 (configurable via `SERVER_PORT`)
+- **Frontend service** on port 5175 (configurable via `FRONTEND_PORT`)
+- **Sled database** with persistent volume
+
+#### 3. Verify the Services
+
+```bash
+# Check backend health
+curl http://localhost:3000/health
+
+# Check frontend
+open http://localhost:5175
+```
+
+### Docker Configuration
+
+The `docker-compose.yml` file includes:
+
+```yaml
+services:
+  prompt-sentinel:
+    build: .
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    environment:
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - RUST_LOG=${RUST_LOG}
+      - SERVER_PORT=${SERVER_PORT}
+      - SLED_DB_PATH=${SLED_DB_PATH}
+    volumes:
+      - sled-data:/data
+    restart: unless-stopped
+
+  demo-ui:
+    build:
+      context: ./demo-ui
+      dockerfile: Dockerfile
+    ports:
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+    environment:
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+    depends_on:
+      - prompt-sentinel
+    restart: unless-stopped
+
+volumes:
+  sled-data:
+```
+
+### Development Workflow
+
+#### 1. Run in Development Mode
+
+```bash
+# Start the backend
+cargo run
+
+# In another terminal, start the frontend
+cd demo-ui
+npm install
+npm run dev
+```
+
+#### 2. Run Tests
+
+```bash
+# Run all tests
+cargo test
+
+# Run specific test
+cargo test --test compliance_flow
+```
+
+#### 3. Build for Production
+
+```bash
+# Build optimized backend
+cargo build --release
+
+# Build optimized frontend
+cd demo-ui
+npm run build
+```
+
+### Next Steps
+
+Now that you have the framework running, explore:
+
+1. **[Framework Overview](#framework-overview)** - Understand the architecture
+2. **[API Documentation](#api-documentation)** - Learn about all endpoints
+3. **[Usage Examples](#usage-examples)** - See practical examples
+4. **[Configuration](#configuration)** - Customize the framework
 
 ## Framework Overview
 
@@ -1316,6 +1522,8 @@ The Audit Module provides comprehensive logging and proof generation.
 
 ## Configuration
 
+This section covers detailed configuration options for customizing the framework behavior.
+
 ### Configuration Files
 
 #### firewall_rules.json
@@ -1450,6 +1658,154 @@ Check Mistral API integration health.
 }
 ```
 
+#### GET /v1/models
+
+Validate all configured Mistral AI models and check their availability.
+
+**Response:**
+```json
+{
+  "generation_model": {
+    "model_name": "string",
+    "available": boolean,
+    "message": "string"
+  },
+  "moderation_model": {
+    "model_name": "string",
+    "available": boolean,
+    "message": "string"
+  },
+  "embedding_model": {
+    "model_name": "string",
+    "available": boolean,
+    "message": "string"
+  },
+  "overall_status": "healthy|degraded|unhealthy"
+}
+```
+
+#### POST /api/audit/trail
+
+Retrieve audit records with filtering and pagination options.
+
+**Request:**
+```json
+{
+  "start_time": "ISO8601_timestamp",
+  "end_time": "ISO8601_timestamp",
+  "correlation_id": "string",
+  "limit": 100,
+  "offset": 0
+}
+```
+
+**Response:**
+```json
+{
+  "records": [
+    {
+      "correlation_id": "string",
+      "timestamp": "ISO8601",
+      "original_prompt": "string",
+      "sanitized_prompt": "string",
+      "firewall_action": "string",
+      "bias_score": 0.0-1.0,
+      "final_status": "string"
+    }
+  ],
+  "total_count": 100,
+  "limit": 100,
+  "offset": 0
+}
+```
+
+#### POST /api/compliance/report
+
+Generate comprehensive compliance reports with risk classification and findings.
+
+**Request:**
+```json
+{
+  "start_time": "ISO8601_timestamp",
+  "end_time": "ISO8601_timestamp",
+  "format": "json|pdf",
+  "include_details": true
+}
+```
+
+**Response:**
+```json
+{
+  "report_id": "string",
+  "status": "generated|processing|failed",
+  "download_url": "string",
+  "summary": {
+    "total_requests": 100,
+    "compliant": 95,
+    "non_compliant": 5,
+    "risk_distribution": {
+      "unacceptable": 0,
+      "high": 2,
+      "limited": 3,
+      "minimal": 95
+    }
+  }
+}
+```
+
+#### GET /api/compliance/config
+
+Retrieve current compliance configuration including EU AI Act rules and documentation requirements.
+
+**Response:**
+```json
+{
+  "eu_risk_keywords": {
+    "unacceptable": ["string"],
+    "high": ["string"],
+    "limited": ["string"]
+  },
+  "documentation_requirements": {
+    "technical": true,
+    "transparency": true,
+    "copyright": true
+  },
+  "bias_threshold": 0.35,
+  "max_input_length": 4096
+}
+```
+
+#### POST /api/compliance/config
+
+Update compliance configuration with new rules and requirements.
+
+**Request:**
+```json
+{
+  "eu_risk_keywords": {
+    "unacceptable": ["string"],
+    "high": ["string"],
+    "limited": ["string"]
+  },
+  "documentation_requirements": {
+    "technical": true,
+    "transparency": true,
+    "copyright": true
+  },
+  "bias_threshold": 0.35,
+  "max_input_length": 4096
+}
+```
+
+**Response:**
+```json
+{
+  "status": "updated",
+  "message": "Configuration updated successfully",
+  "timestamp": "ISO8601"
+}
+```
+
 ## Usage Examples
 
 ### Basic Usage
@@ -1526,55 +1882,7 @@ else:
     print(f"Error: {response.text}")
 ```
 
-## Setup and Installation
 
-### Prerequisites
-
-- Rust 1.70+
-- Cargo
-- Mistral API key (optional, for full functionality)
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone https://github.com/Inferenco/prompt_sentinel.git
-cd prompt_sentinel
-```
-
-2. Build the project:
-```bash
-cargo build --release
-```
-
-3. Set environment variables:
-```bash
-export MISTRAL_API_KEY="your-api-key"
-export RUST_LOG="info"
-```
-
-4. Run the server:
-```bash
-cargo run --release
-```
-
-### Docker Setup
-
-```dockerfile
-FROM rust:1.70 as builder
-WORKDIR /app
-COPY . .
-RUN cargo build --release
-
-FROM debian:bullseye-slim
-COPY --from=builder /app/target/release/prompt_sentinel /usr/local/bin/
-
-ENV MISTRAL_API_KEY="your-api-key"
-ENV RUST_LOG="info"
-
-EXPOSE 3000
-CMD ["prompt_sentinel"]
-```
 
 ## Running Tests
 
@@ -1601,6 +1909,130 @@ cargo bench
 ```bash
 cargo test --test security_regressions
 ```
+
+## Observability Features
+
+The framework includes comprehensive observability features for monitoring, debugging, and performance analysis.
+
+### Correlation IDs
+
+Every request is automatically assigned a unique correlation ID that follows this format:
+
+```
+UUID-atomic-counter
+```
+
+Example: `550e8400-e29b-41d4-a716-446655440000-42`
+
+**Usage:**
+- Track requests across microservices
+- Debug complex workflows
+- Correlate logs and metrics
+- Trace end-to-end request flows
+
+### Metrics Collection
+
+The framework exports Prometheus metrics on port 9090 with the following key metrics:
+
+**Request Metrics:**
+- `prompt_sentinel_requests_total`: Total request count by endpoint and status
+- `prompt_sentinel_request_duration_seconds`: Request latency histograms
+- `prompt_sentinel_active_requests`: Currently active requests
+
+**Error Metrics:**
+- `prompt_sentinel_errors_total`: Error count by type and endpoint
+- `prompt_sentinel_mistral_errors_total`: Mistral API error count
+
+**Custom Metrics:**
+- `prompt_sentinel_compliance_checks_total`: Compliance check count by status
+- `prompt_sentinel_firewall_blocks_total`: Firewall block count by reason
+
+**Example Metrics Endpoint:**
+```
+GET http://localhost:9090/metrics
+```
+
+### Enhanced Logging
+
+Structured logging with correlation context at all levels:
+
+**Log Levels:**
+- `ERROR`: Critical failures
+- `WARN`: Potential issues
+- `INFO`: Important events (default)
+- `DEBUG`: Detailed debugging
+- `TRACE`: Verbose tracing
+
+**Log Format:**
+```
+LEVEL TIMESTAMP [CORRELATION_ID] MESSAGE operation=operation_name
+```
+
+**Example:**
+```
+INFO 2026-03-01T12:00:00Z [550e8400-e29b-41d4-a716-446655440000-42] Starting compliance workflow operation=compliance_workflow
+```
+
+### Telemetry Middleware
+
+Automatic instrumentation for all HTTP endpoints:
+
+**Features:**
+- Request/response logging
+- Latency measurement
+- Error tracking
+- Correlation ID propagation
+- Structured context
+
+**Example Integration:**
+```rust
+use prompt_sentinel::modules::telemetry::tracing::init_tracing;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize enhanced tracing
+    init_tracing();
+    
+    // All subsequent requests will be automatically instrumented
+    // with correlation IDs, metrics, and structured logging
+    
+    Ok(())
+}
+```
+
+### Performance Monitoring
+
+**Key Performance Indicators:**
+- Request latency percentiles (p50, p90, p99)
+- Throughput (requests per second)
+- Error rates by endpoint
+- Service health metrics
+
+**Monitoring Setup:**
+```yaml
+# Prometheus configuration
+scrape_configs:
+  - job_name: 'prompt_sentinel'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['localhost:9090']
+```
+
+### Production Monitoring
+
+**Recommended Alerts:**
+- High error rates (>5%)
+- Increased latency (>1s p99)
+- Service unavailability
+- Rate limit approaches
+- Model validation failures
+
+**Dashboard Metrics:**
+- Request volume and trends
+- Error rates by endpoint
+- Latency distributions
+- Service health status
+- Compliance statistics
 
 ## Configuration Options
 

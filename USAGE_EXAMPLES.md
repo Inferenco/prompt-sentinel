@@ -303,9 +303,14 @@ def monitor_health(interval=60, max_retries=3):
             mistral_response = requests.get(f"{base_url}/api/mistral/health", timeout=10)
             mistral_data = mistral_response.json()
             
+            # Check model validation
+            models_response = requests.get(f"{base_url}/v1/models", timeout=10)
+            models_data = models_response.json()
+            
             print(f"Health: {health_response.text}")
             print(f"Mistral: {mistral_data['status']}")
             print(f"Models: {', '.join(mistral_data['models'])}")
+            print(f"Model Validation: {models_data['overall_status']}")
             
         except Exception as e:
             print(f"Health check failed: {e}")
@@ -314,6 +319,92 @@ def monitor_health(interval=60, max_retries=3):
 
 if __name__ == "__main__":
     monitor_health()
+```
+
+#### Audit Trail Access
+
+```python
+def get_audit_trail(limit=10, offset=0):
+    """Retrieve audit trail records"""
+    url = "http://localhost:3000/api/audit/trail"
+    
+    payload = {
+        "limit": limit,
+        "offset": offset
+    }
+    
+    response = requests.post(url, json=payload)
+    return response.json()
+
+# Example usage
+audit_data = get_audit_trail(limit=5)
+print(f"Retrieved {len(audit_data['records'])} audit records")
+for record in audit_data['records']:
+    print(f"  {record['timestamp']}: {record['final_status']}")
+```
+
+#### Compliance Report Generation
+
+```python
+def generate_compliance_report(start_time=None, end_time=None):
+    """Generate compliance report"""
+    url = "http://localhost:3000/api/compliance/report"
+    
+    payload = {
+        "format": "json",
+        "include_details": True
+    }
+    
+    if start_time:
+        payload['start_time'] = start_time
+    if end_time:
+        payload['end_time'] = end_time
+    
+    response = requests.post(url, json=payload)
+    return response.json()
+
+# Example usage
+report = generate_compliance_report()
+print(f"Report Status: {report['status']}")
+print(f"Total Requests: {report['summary']['total_requests']}")
+print(f"Compliant: {report['summary']['compliant']}")
+print(f"Non-compliant: {report['summary']['non_compliant']}")
+```
+
+#### Compliance Configuration Management
+
+```python
+def get_compliance_config():
+    """Get current compliance configuration"""
+    url = "http://localhost:3000/api/compliance/config"
+    response = requests.get(url)
+    return response.json()
+
+def update_compliance_config(bias_threshold=None, max_length=None):
+    """Update compliance configuration"""
+    url = "http://localhost:3000/api/compliance/config"
+    
+    payload = {}
+    if bias_threshold is not None:
+        payload['bias_threshold'] = bias_threshold
+    if max_length is not None:
+        payload['max_input_length'] = max_length
+    
+    response = requests.post(url, json=payload)
+    return response.json()
+
+# Example usage
+# Get current configuration
+current_config = get_compliance_config()
+print(f"Current bias threshold: {current_config['bias_threshold']}")
+
+# Update configuration
+update_result = update_compliance_config(bias_threshold=0.4)
+print(f"Update status: {update_result['status']}")
+
+# Verify update
+updated_config = get_compliance_config()
+print(f"Updated bias threshold: {updated_config['bias_threshold']}")
 ```
 
 ### JavaScript Examples
@@ -463,6 +554,45 @@ module.exports = { checkSentinelHealth, sentinelHealthMiddleware };
 curl -X POST http://localhost:3000/api/compliance/check \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Explain the benefits of functional programming"}' \
+  | jq .
+```
+
+#### Model Validation
+
+```bash
+curl -X GET http://localhost:3000/v1/models | jq .
+```
+
+#### Audit Trail Access
+
+```bash
+curl -X POST http://localhost:3000/api/audit/trail \
+  -H "Content-Type: application/json" \
+  -d '{"limit": 10, "offset": 0}' \
+  | jq .
+```
+
+#### Compliance Report Generation
+
+```bash
+curl -X POST http://localhost:3000/api/compliance/report \
+  -H "Content-Type: application/json" \
+  -d '{"format": "json", "include_details": true}' \
+  | jq .
+```
+
+#### Get Compliance Configuration
+
+```bash
+curl -X GET http://localhost:3000/api/compliance/config | jq .
+```
+
+#### Update Compliance Configuration
+
+```bash
+curl -X POST http://localhost:3000/api/compliance/config \
+  -H "Content-Type: application/json" \
+  -d '{"bias_threshold": 0.4, "max_input_length": 8000}' \
   | jq .
 ```
 
