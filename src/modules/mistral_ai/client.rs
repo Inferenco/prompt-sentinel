@@ -10,7 +10,7 @@ use tracing::{debug, error, info, warn};
 use super::dtos::{
     ChatCompletionRequest, ChatCompletionResponse, EmbeddingRequest, EmbeddingResponse,
     LanguageDetectionRequest, LanguageDetectionResponse, ModelListResponse, ModerationRequest,
-    ModerationResponse, TranslationRequest, TranslationResponse,
+    ModerationResponse, TokenUsage, TranslationRequest, TranslationResponse,
 };
 use crate::modules::mistral_ai::dtos::ChatMessage;
 
@@ -165,8 +165,21 @@ impl MistralClient for HttpMistralClient {
             .unwrap_or(request.model.as_str())
             .to_owned();
 
+        // Extract token usage if available
+        let usage = json.get("usage").and_then(|u| {
+            Some(TokenUsage {
+                prompt_tokens: u.get("prompt_tokens")?.as_u64()? as u32,
+                completion_tokens: u.get("completion_tokens")?.as_u64()? as u32,
+                total_tokens: u.get("total_tokens")?.as_u64()? as u32,
+            })
+        });
+
         debug!("Chat completion successful for model: {}", model);
-        Ok(ChatCompletionResponse { model, output_text })
+        Ok(ChatCompletionResponse {
+            model,
+            output_text,
+            usage,
+        })
     }
 
     async fn moderate(
@@ -357,6 +370,11 @@ impl Default for MockMistralClient {
             chat_response: ChatCompletionResponse {
                 model: "mistral-large-latest".to_owned(),
                 output_text: "Mock response".to_owned(),
+                usage: Some(TokenUsage {
+                    prompt_tokens: 10,
+                    completion_tokens: 20,
+                    total_tokens: 30,
+                }),
             },
             moderation_responses: Arc::new(Mutex::new(vec![
                 ModerationResponse {

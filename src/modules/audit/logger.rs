@@ -28,7 +28,24 @@ pub struct AuditEvent {
     /// Human-readable explanation of the decision
     pub final_reason: String,
     pub model_used: Option<String>,
+    /// Short preview of the output (first 160 chars)
     pub output_preview: Option<String>,
+    /// Full model response text (for complete audit trail)
+    pub full_output_text: Option<String>,
+    /// Categories flagged by output moderation
+    pub output_moderation_categories: Vec<String>,
+    /// EU AI Act risk tier classification
+    pub eu_risk_tier: Option<String>,
+    /// EU AI Act compliance findings
+    pub eu_findings: Option<Vec<String>>,
+    /// Token count for the request (prompt + completion)
+    pub tokens_used: Option<u32>,
+    /// Response generation latency in milliseconds
+    pub response_latency_ms: Option<u64>,
+    /// Detected language of the original prompt
+    pub detected_language: Option<String>,
+    /// Whether the response was translated back to original language
+    pub was_translated: bool,
 }
 
 #[derive(Clone)]

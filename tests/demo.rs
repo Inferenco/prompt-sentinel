@@ -131,6 +131,7 @@ async fn run_demo() {
             WorkflowStatus::BlockedBySemantic => "🔍",
             WorkflowStatus::BlockedByInputModeration => "🛑",
             WorkflowStatus::BlockedByOutputModeration => "🛑",
+            WorkflowStatus::BlockedByEuCompliance => "🇪🇺",
         };
 
         println!("   Result: {} {:?}", status_emoji, result.status);

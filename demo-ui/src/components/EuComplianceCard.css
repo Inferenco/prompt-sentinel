@@ -1,0 +1,229 @@
+.eu-compliance-card {
+  background: var(--card-bg, #1a1a2e);
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 1px solid var(--border-color, #2a2a4a);
+}
+
+.eu-compliance-card.loading,
+.eu-compliance-card.empty {
+  opacity: 0.7;
+}
+
+.eu-compliance-card.compliant {
+  border-color: var(--success-color, #10b981);
+}
+
+.eu-compliance-card.non-compliant {
+  border-color: var(--danger-color, #ef4444);
+}
+
+.eu-compliance-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.eu-compliance-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-primary, #fff);
+}
+
+.eu-compliance-card h4 {
+  margin: 0.75rem 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #a0a0c0);
+}
+
+.risk-tier-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.tier-unacceptable {
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  color: #fff;
+}
+
+.tier-high {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #000;
+}
+
+.tier-limited {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+}
+
+.tier-minimal {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+}
+
+.compliance-status {
+  margin-bottom: 1rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.status-badge.compliant {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-badge.non-compliant {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.obligations-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.obligations-table th {
+  text-align: left;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border-color, #2a2a4a);
+  color: var(--text-secondary, #a0a0c0);
+  font-weight: 500;
+}
+
+.obligations-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border-color, #2a2a4a);
+  vertical-align: top;
+}
+
+.obligations-table tr:last-child td {
+  border-bottom: none;
+}
+
+.status-cell {
+  width: 40px;
+  text-align: center;
+}
+
+.status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.status-icon.status-met {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.status-icon.status-partial {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.status-icon.status-gap {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.status-icon.status-na {
+  background: rgba(107, 114, 128, 0.2);
+  color: #6b7280;
+}
+
+.obligation-detail {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #a0a0c0);
+  margin-top: 0.25rem;
+}
+
+.legal-basis {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #a0a0c0);
+}
+
+.applicable-date {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #a0a0c0);
+  white-space: nowrap;
+}
+
+.findings-section {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color, #2a2a4a);
+}
+
+.findings-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.finding-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed var(--border-color, #2a2a4a);
+  align-items: flex-start;
+}
+
+.finding-item:last-child {
+  border-bottom: none;
+}
+
+.finding-code {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.finding-detail {
+  font-size: 0.85rem;
+  color: var(--text-primary, #fff);
+}
+
+.disclaimer-section {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color, #2a2a4a);
+}
+
+.disclaimer {
+  font-size: 0.7rem;
+  color: var(--text-secondary, #a0a0c0);
+  font-style: italic;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.loading-indicator {
+  color: var(--text-secondary, #a0a0c0);
+  font-style: italic;
+}
+
+.empty-state {
+  color: var(--text-secondary, #a0a0c0);
+  font-style: italic;
+}

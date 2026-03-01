@@ -106,6 +106,7 @@ async fn output_moderation_can_block_generation() {
     .with_chat_response(ChatCompletionResponse {
         model: "mistral-large-latest".to_owned(),
         output_text: "Unsafe generated content".to_owned(),
+        usage: None,
     });
 
     let (engine, _storage) = build_engine(mock_client).await;

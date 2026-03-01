@@ -9,7 +9,7 @@ use super::dtos::{
     ComplianceConfigurationResponse, ComplianceConfigurationSummary, ComplianceReportRequest,
     ComplianceReportResponse, DocumentationRequirements, RiskKeywordCounts,
 };
-use super::model::{AiRiskTier, ComplianceFinding};
+use super::model::{AiRiskTier, ComplianceFinding, EuComplianceResult, ObligationResult, ObligationStatus};
 
 const DEFAULT_EU_KEYWORDS_PATH: &str = "config/eu_risk_keywords.json";
 const EU_KEYWORDS_PATH_ENV: &str = "PROMPT_SENTINEL_EU_KEYWORDS_PATH";
@@ -109,6 +109,108 @@ lazy_static::lazy_static! {
 pub struct EuLawComplianceService;
 
 impl EuLawComplianceService {
+    /// Check compliance for a prompt/use-case and return structured result
+    pub fn check_prompt(&self, prompt: &str) -> EuComplianceResult {
+        let risk_tier = classify_risk(prompt);
+        let mut obligations = Vec::new();
+        let mut findings = Vec::new();
+
+        // Article 5 - Prohibited Practices (applicable from Feb 2, 2025)
+        let prohibited_status = if matches!(risk_tier, AiRiskTier::Unacceptable) {
+            findings.push(ComplianceFinding {
+                code: "EU-RISK-001".to_owned(),
+                detail: "Prompt matches a prohibited-risk category under EU AI Act Article 5."
+                    .to_owned(),
+            });
+            ObligationStatus::Gap
+        } else {
+            ObligationStatus::Met
+        };
+        obligations.push(ObligationResult {
+            id: "ART5-PROHIBITED".to_owned(),
+            name: "Prohibited AI Practices".to_owned(),
+            legal_basis: "Article 5, EU AI Act (Regulation 2024/1689)".to_owned(),
+            status: prohibited_status,
+            detail: if matches!(risk_tier, AiRiskTier::Unacceptable) {
+                Some("Use case matches prohibited practices: social scoring, biometric surveillance, emotion recognition in workplace/school, or manipulative content.".to_owned())
+            } else {
+                None
+            },
+            applicable_from: Some("2025-02-02".to_owned()),
+        });
+
+        // Article 4 - AI Literacy (applicable from Feb 2, 2025)
+        obligations.push(ObligationResult {
+            id: "ART4-LITERACY".to_owned(),
+            name: "AI Literacy".to_owned(),
+            legal_basis: "Article 4, EU AI Act (Regulation 2024/1689)".to_owned(),
+            status: ObligationStatus::Met, // Assumed met by using this compliance framework
+            detail: Some("Deployers must ensure staff have sufficient AI literacy.".to_owned()),
+            applicable_from: Some("2025-02-02".to_owned()),
+        });
+
+        // Article 50 - Transparency (applicable based on risk tier)
+        let transparency_status = match risk_tier {
+            AiRiskTier::Unacceptable | AiRiskTier::High | AiRiskTier::Limited => {
+                ObligationStatus::Partial // Demo assumes no transparency notice yet
+            }
+            AiRiskTier::Minimal => ObligationStatus::NotApplicable,
+        };
+        if matches!(transparency_status, ObligationStatus::Partial) {
+            findings.push(ComplianceFinding {
+                code: "EU-TRN-002".to_owned(),
+                detail: "Transparency notice required for this risk tier.".to_owned(),
+            });
+        }
+        obligations.push(ObligationResult {
+            id: "ART50-TRANSPARENCY".to_owned(),
+            name: "Transparency Obligations".to_owned(),
+            legal_basis: "Article 50, EU AI Act (Regulation 2024/1689)".to_owned(),
+            status: transparency_status,
+            detail: Some("Users must be informed they are interacting with an AI system.".to_owned()),
+            applicable_from: Some("2026-08-02".to_owned()),
+        });
+
+        // High-risk specific obligations
+        if matches!(risk_tier, AiRiskTier::High) {
+            // Article 9 - Risk Management
+            obligations.push(ObligationResult {
+                id: "ART9-RISK-MGMT".to_owned(),
+                name: "Risk Management System".to_owned(),
+                legal_basis: "Article 9, EU AI Act (Regulation 2024/1689)".to_owned(),
+                status: ObligationStatus::Partial,
+                detail: Some("High-risk AI requires documented risk management system.".to_owned()),
+                applicable_from: Some("2026-08-02".to_owned()),
+            });
+
+            // Article 14 - Human Oversight
+            obligations.push(ObligationResult {
+                id: "ART14-OVERSIGHT".to_owned(),
+                name: "Human Oversight".to_owned(),
+                legal_basis: "Article 14, EU AI Act (Regulation 2024/1689)".to_owned(),
+                status: ObligationStatus::Partial,
+                detail: Some("High-risk AI must enable human oversight and intervention.".to_owned()),
+                applicable_from: Some("2026-08-02".to_owned()),
+            });
+
+            findings.push(ComplianceFinding {
+                code: "EU-HIGH-001".to_owned(),
+                detail: "High-risk use case detected. Additional compliance controls required.".to_owned(),
+            });
+        }
+
+        let compliant = !matches!(risk_tier, AiRiskTier::Unacceptable)
+            && !obligations.iter().any(|o| matches!(o.status, ObligationStatus::Gap));
+
+        EuComplianceResult {
+            risk_tier,
+            compliant,
+            obligations,
+            findings,
+            scope_disclaimer: "This compliance check applies to a defined limited-risk EU chatbot use case. It does not constitute legal advice or guarantee compliance for all deployment scenarios.".to_owned(),
+        }
+    }
+
     pub fn check(&self, request: ComplianceCheckRequest) -> ComplianceCheckResponse {
         let intended_use = request.intended_use.trim();
         let risk_tier = classify_risk(intended_use);
