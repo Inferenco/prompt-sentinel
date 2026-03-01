@@ -28,7 +28,7 @@ async fn build_demo_engine() -> ComplianceEngine {
         Some("mistral-moderation-latest".to_owned()),
         "mistral-embed",
     );
-    let semantic = SemanticDetectionService::new(mistral.clone());
+    let semantic = SemanticDetectionService::new(mistral.clone(), 0.70, 0.80);
     // Note: In production, call semantic.initialize().await to load templates
     ComplianceEngine::new(
         PromptFirewallService::default(),

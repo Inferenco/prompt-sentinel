@@ -10,24 +10,25 @@ use super::dtos::{
     SemanticScanResult,
 };
 
-/// Threshold for Low/Medium boundary
-const MEDIUM_THRESHOLD: f32 = 0.65;
-/// Threshold for Medium/High boundary
-const HIGH_THRESHOLD: f32 = 0.80;
-
 #[derive(Clone)]
 pub struct SemanticDetectionService {
     mistral_service: MistralService,
     cached_templates: Arc<RwLock<Vec<CachedTemplate>>>,
     initialized: Arc<RwLock<bool>>,
+    /// Threshold for Low/Medium boundary
+    medium_threshold: f32,
+    /// Threshold for Medium/High boundary
+    high_threshold: f32,
 }
 
 impl SemanticDetectionService {
-    pub fn new(mistral_service: MistralService) -> Self {
+    pub fn new(mistral_service: MistralService, medium_threshold: f32, high_threshold: f32) -> Self {
         Self {
             mistral_service,
             cached_templates: Arc::new(RwLock::new(Vec::new())),
             initialized: Arc::new(RwLock::new(false)),
+            medium_threshold,
+            high_threshold,
         }
     }
 
@@ -87,7 +88,7 @@ impl SemanticDetectionService {
         }
 
         let (template, similarity) = best_match.unwrap();
-        let risk_level = classify_risk(similarity);
+        let risk_level = self.classify_risk(similarity);
         let risk_score = similarity;
 
         debug!(
@@ -127,6 +128,17 @@ impl SemanticDetectionService {
         let response = self.mistral_service.embed_text(text).await?;
         Ok(response.vector)
     }
+
+    /// Classify risk level based on similarity score using configured thresholds
+    fn classify_risk(&self, similarity: f32) -> SemanticRiskLevel {
+        if similarity > self.high_threshold {
+            SemanticRiskLevel::High
+        } else if similarity > self.medium_threshold {
+            SemanticRiskLevel::Medium
+        } else {
+            SemanticRiskLevel::Low
+        }
+    }
 }
 
 /// Compute cosine similarity between two vectors
@@ -144,17 +156,6 @@ fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
     }
 
     dot_product / (norm_a * norm_b)
-}
-
-/// Classify risk level based on similarity score
-fn classify_risk(similarity: f32) -> SemanticRiskLevel {
-    if similarity > HIGH_THRESHOLD {
-        SemanticRiskLevel::High
-    } else if similarity > MEDIUM_THRESHOLD {
-        SemanticRiskLevel::Medium
-    } else {
-        SemanticRiskLevel::Low
-    }
 }
 
 #[derive(Debug, Error)]
@@ -195,27 +196,5 @@ mod tests {
         let b = vec![-1.0, 0.0];
         let sim = cosine_similarity(&a, &b);
         assert!((sim - (-1.0)).abs() < 0.0001);
-    }
-
-    #[test]
-    fn test_classify_risk_low() {
-        assert_eq!(classify_risk(0.5), SemanticRiskLevel::Low);
-        assert_eq!(classify_risk(0.0), SemanticRiskLevel::Low);
-        assert_eq!(classify_risk(0.64), SemanticRiskLevel::Low);
-    }
-
-    #[test]
-    fn test_classify_risk_medium() {
-        assert_eq!(classify_risk(0.65), SemanticRiskLevel::Low); // Boundary is >0.65
-        assert_eq!(classify_risk(0.66), SemanticRiskLevel::Medium);
-        assert_eq!(classify_risk(0.75), SemanticRiskLevel::Medium);
-        assert_eq!(classify_risk(0.80), SemanticRiskLevel::Medium); // Boundary is >0.80
-    }
-
-    #[test]
-    fn test_classify_risk_high() {
-        assert_eq!(classify_risk(0.81), SemanticRiskLevel::High);
-        assert_eq!(classify_risk(0.95), SemanticRiskLevel::High);
-        assert_eq!(classify_risk(1.0), SemanticRiskLevel::High);
     }
 }

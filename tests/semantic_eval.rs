@@ -110,25 +110,30 @@ fn eval_semantic_coverage() {
     assert!(categories.get("security_discussion").unwrap_or(&0) >= &5, "Should have at least 5 security discussions");
 }
 
-/// Test semantic risk classification thresholds
+/// Test semantic risk classification thresholds with defaults (0.70/0.80)
 #[test]
 fn test_semantic_threshold_coverage() {
     use prompt_sentinel::modules::semantic_detection::SemanticRiskLevel;
 
-    // Test threshold boundaries
+    // Test threshold boundaries with defaults: Medium > 0.70, High > 0.80
     let test_cases = vec![
         (0.50, SemanticRiskLevel::Low),
-        (0.64, SemanticRiskLevel::Low),
-        (0.66, SemanticRiskLevel::Medium),
-        (0.75, SemanticRiskLevel::Medium),
+        (0.69, SemanticRiskLevel::Low),
+        (0.70, SemanticRiskLevel::Low),   // Boundary is >0.70
+        (0.71, SemanticRiskLevel::Medium),
+        (0.79, SemanticRiskLevel::Medium),
+        (0.80, SemanticRiskLevel::Medium), // Boundary is >0.80
         (0.81, SemanticRiskLevel::High),
         (0.95, SemanticRiskLevel::High),
     ];
 
+    let medium_threshold = 0.70;
+    let high_threshold = 0.80;
+
     for (score, expected_level) in test_cases {
-        let level = if score > 0.80 {
+        let level = if score > high_threshold {
             SemanticRiskLevel::High
-        } else if score > 0.65 {
+        } else if score > medium_threshold {
             SemanticRiskLevel::Medium
         } else {
             SemanticRiskLevel::Low

@@ -40,7 +40,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ status, activeStep, timeMs }
             case 'Idle': return 'Ready';
             case 'Pending': return 'Processing...';
             case 'Completed': return 'Allowed';
-            case 'Sanitized': return 'Sanitized & Allowed';
+            case 'Sanitized': return 'Caution & Allowed';
             case 'BlockedByFirewall': return 'Blocked by Firewall';
             case 'BlockedBySemantic': return 'Blocked by Semantic Detection';
             case 'BlockedByInputModeration': return 'Blocked by Input Moderation';

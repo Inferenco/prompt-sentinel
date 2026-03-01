@@ -13,7 +13,7 @@ export const StatusCard: React.FC<StatusCardProps> = ({ status, loading }) => {
         if (loading) return { text: 'Analyzing...', icon: '⏳', color: 'neutral' };
         if (status === 'Idle') return { text: 'Ready', icon: '⚡', color: 'neutral' };
         if (status === 'Completed') return { text: 'Allowed', icon: '✓', color: 'success' };
-        if (status === 'Sanitized') return { text: 'Sanitized', icon: '⚠️', color: 'warning' };
+        if (status === 'Sanitized') return { text: 'Caution', icon: '⚠️', color: 'warning' };
         return { text: 'Blocked', icon: '✗', color: 'danger' };
     };
 

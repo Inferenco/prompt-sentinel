@@ -21,7 +21,7 @@ async fn build_engine(mock_client: MockMistralClient) -> (ComplianceEngine, Arc<
         Some("mistral-moderation-latest".to_owned()),
         "mistral-embed",
     );
-    let semantic = SemanticDetectionService::new(mistral.clone());
+    let semantic = SemanticDetectionService::new(mistral.clone(), 0.70, 0.80);
     // Note: We don't initialize semantic service in tests (requires real embeddings API)
     // The service gracefully handles uninitialized state by returning low risk
     let engine = ComplianceEngine::new(
