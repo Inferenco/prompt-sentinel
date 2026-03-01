@@ -295,8 +295,6 @@ impl FrameworkConfig {
             Arc::new(SledAuditStorage::new(&self.sled_db_path)?);
         let audit_logger = AuditLogger::new(audit_storage);
 
-        let firewall_service = PromptFirewallService::new(settings.max_input_length);
-        let bias_service = BiasDetectionService::new(settings.bias_threshold);
         let mistral_client: Arc<dyn MistralClient> = if settings.mistral_api_key.as_deref() == Some("mock") {
             Arc::new(crate::modules::mistral_ai::client::MockMistralClient::default())
         } else {
@@ -306,11 +304,14 @@ impl FrameworkConfig {
             ))
         };
         let mistral_service = MistralService::new(
-            mistral_client,
+            mistral_client.clone(),
             settings.generation_model.clone(),
             settings.moderation_model.clone(),
             settings.embedding_model.clone(),
         );
+
+        let firewall_service = PromptFirewallService::new_with_mistral(settings.max_input_length, mistral_client.clone());
+        let bias_service = BiasDetectionService::new_with_mistral(settings.bias_threshold, mistral_client.clone());
 
         // Perform model validation at startup
         info!("Validating Mistral models at startup...");

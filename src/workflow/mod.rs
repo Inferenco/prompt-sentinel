@@ -125,13 +125,13 @@ impl ComplianceEngine {
         let firewall = self.firewall_service.inspect(PromptFirewallRequest {
             prompt: request.prompt.clone(),
             correlation_id: Some(correlation_id.clone()),
-        });
+        }).await;
 
         // Step 2: Bias detection
         let bias = self.bias_service.scan(BiasScanRequest {
             text: firewall.sanitized_prompt.clone(),
             threshold: None,
-        });
+        }).await;
 
         // Step 3: Semantic detection (embeddings-based)
         let semantic = self.semantic_service.scan(SemanticScanRequest {

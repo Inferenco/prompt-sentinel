@@ -1,7 +1,7 @@
 use super::dtos::{PromptFirewallRequest, PromptFirewallResult};
 use super::service::PromptFirewallService;
 
-pub fn handle_prompt(
+pub async fn handle_prompt(
     service: &PromptFirewallService,
     prompt: impl Into<String>,
     correlation_id: Option<String>,
@@ -9,5 +9,5 @@ pub fn handle_prompt(
     service.inspect(PromptFirewallRequest {
         prompt: prompt.into(),
         correlation_id,
-    })
+    }).await
 }

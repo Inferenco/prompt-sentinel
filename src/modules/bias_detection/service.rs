@@ -1,11 +1,13 @@
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use super::dtos::{BiasScanRequest, BiasScanResult};
 use super::model::{BiasCategory, BiasLevel};
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct BiasDetectionService {
     default_threshold: f32,
+    mistral_service: Option<Arc<dyn crate::modules::mistral_ai::client::MistralClient>>,
 }
 
 #[derive(Clone, Debug)]
@@ -148,12 +150,45 @@ const RULES: &[BiasRule] = &[
 
 impl BiasDetectionService {
     pub fn new(default_threshold: f32) -> Self {
-        Self { default_threshold }
+        Self {
+            default_threshold,
+            mistral_service: None,
+        }
     }
 
-    pub fn scan(&self, request: BiasScanRequest) -> BiasScanResult {
+    pub fn new_with_mistral(
+        default_threshold: f32,
+        mistral_service: Arc<dyn crate::modules::mistral_ai::client::MistralClient>,
+    ) -> Self {
+        Self {
+            default_threshold,
+            mistral_service: Some(mistral_service),
+        }
+    }
+
+    async fn translate_if_needed(&self, text: &str) -> String {
+        let Some(mistral_service) = &self.mistral_service else {
+            return text.to_owned();
+        };
+
+        // Always translate to English for consistent analysis when Mistral service is available
+        let Ok(translation) = mistral_service
+            .translate_text(crate::modules::mistral_ai::dtos::TranslationRequest {
+                text: text.to_owned(),
+                target_language: "English".to_owned(),
+            })
+            .await
+        else {
+            return text.to_owned();
+        };
+        
+        translation.translated_text
+    }
+
+    pub async fn scan(&self, request: BiasScanRequest) -> BiasScanResult {
+        let text_to_analyze = self.translate_if_needed(&request.text).await;
         let threshold = normalize_threshold(request.threshold, self.default_threshold);
-        let normalized = request.text.to_ascii_lowercase();
+        let normalized = text_to_analyze.to_ascii_lowercase();
 
         let mut score = 0.0f32;
         let mut categories = HashSet::new();
@@ -220,6 +255,7 @@ impl Default for BiasDetectionService {
     fn default() -> Self {
         Self {
             default_threshold: 0.35,
+            mistral_service: None,
         }
     }
 }
@@ -228,38 +264,38 @@ impl Default for BiasDetectionService {
 mod tests {
     use super::*;
 
-    #[test]
-    fn returns_low_for_neutral_text() {
+    #[tokio::test]
+    async fn returns_low_for_neutral_text() {
         let service = BiasDetectionService::default();
         let result = service.scan(BiasScanRequest {
             text: "Summarize the quarterly financial report".to_owned(),
             threshold: None,
-        });
+        }).await;
         assert_eq!(result.level, BiasLevel::Low);
     }
 
-    #[test]
-    fn returns_high_for_multiple_categories() {
+    #[tokio::test]
+    async fn returns_high_for_multiple_categories() {
         let service = BiasDetectionService::default();
         let result = service.scan(BiasScanRequest {
             text: "Women are bad at math and poor people are lazy".to_owned(),
             threshold: None,
-        });
+        }).await;
         assert_eq!(result.level, BiasLevel::High);
         assert!(result.score > 0.5);
     }
 
-    #[test]
-    fn nan_threshold_falls_back_to_default_threshold() {
+    #[tokio::test]
+    async fn nan_threshold_falls_back_to_default_threshold() {
         let service = BiasDetectionService::default();
         let default_result = service.scan(BiasScanRequest {
             text: "Women are bad at math".to_owned(),
             threshold: None,
-        });
+        }).await;
         let nan_result = service.scan(BiasScanRequest {
             text: "Women are bad at math".to_owned(),
             threshold: Some(f32::NAN),
-        });
+        }).await;
         assert_eq!(default_result.level, nan_result.level);
     }
 }

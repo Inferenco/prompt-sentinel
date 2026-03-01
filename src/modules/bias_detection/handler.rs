@@ -1,7 +1,7 @@
 use super::dtos::{BiasScanRequest, BiasScanResult};
 use super::service::BiasDetectionService;
 
-pub fn handle_bias_scan(
+pub async fn handle_bias_scan(
     service: &BiasDetectionService,
     text: impl Into<String>,
     threshold: Option<f32>,
@@ -9,5 +9,5 @@ pub fn handle_bias_scan(
     service.scan(BiasScanRequest {
         text: text.into(),
         threshold,
-    })
+    }).await
 }
